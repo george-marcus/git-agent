@@ -1,0 +1,20 @@
+Translate the user instruction into git commands.
+Rules:
+- Only return lines that are git commands. No explanation.
+- Prefer safe operations (status, add, commit, push, branch, checkout, fetch, pull).
+- If a destructive command is required (reset --hard, clean, force push), ask for explicit confirmation by marking it as DESTRUCTIVE.
+
+Context:
+- Current branch: {{CurrentBranch}}
+- Staged changes (porcelain):
+{{StatusPorcelain}}
+- Last commit message:
+{{LastCommit}}
+
+User instruction:
+"""
+{{Instruction}}
+"""
+
+Output format:
+One git command per line. If multiple steps are needed, list them in the order they should run.

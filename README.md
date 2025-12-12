@@ -1,0 +1,372 @@
+# git-agent
+
+A .NET CLI tool that translates natural language instructions into git commands using AI providers (Claude, OpenAI, Ollama).
+
+## Installation
+
+### Download Pre-built Binaries
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/george-marcus/git-agent/releases):
+
+| Platform | Download |
+|----------|----------|
+| Windows (x64) | `git-agent-win-x64.exe` |
+| Linux (x64) | `git-agent-linux-x64` |
+| macOS (Intel) | `git-agent-osx-x64` |
+| macOS (Apple Silicon) | `git-agent-osx-arm64` |
+
+#### Quick Install - Windows (PowerShell)
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\git-agent" | Out-Null
+Invoke-WebRequest -Uri "https://github.com/george-marcus/git-agent/releases/latest/download/git-agent-win-x64.exe" -OutFile "$env:LOCALAPPDATA\git-agent\git-agent.exe"
+
+# Add to PATH (run once, then restart terminal)
+$path = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($path -notlike "*git-agent*") {
+    [Environment]::SetEnvironmentVariable("Path", "$path;$env:LOCALAPPDATA\git-agent", "User")
+}
+```
+
+#### Quick Install - Linux
+
+```bash
+mkdir -p ~/.local/bin
+curl -L https://github.com/george-marcus/git-agent/releases/latest/download/git-agent-linux-x64 -o ~/.local/bin/git-agent
+chmod +x ~/.local/bin/git-agent
+```
+
+#### Quick Install - macOS
+
+```bash
+mkdir -p ~/.local/bin
+
+# Apple Silicon (M1/M2/M3)
+curl -L https://github.com/george-marcus/git-agent/releases/latest/download/git-agent-osx-arm64 -o ~/.local/bin/git-agent
+
+# Intel Mac
+curl -L https://github.com/george-marcus/git-agent/releases/latest/download/git-agent-osx-x64 -o ~/.local/bin/git-agent
+
+chmod +x ~/.local/bin/git-agent
+```
+
+Make sure `~/.local/bin` is in your PATH. Add to your shell profile if needed:
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc  # or ~/.bashrc
+```
+
+---
+
+### Build from Source
+
+#### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/george-marcus/git-agent.git
+cd git-agent
+.\scripts\install.ps1
+```
+
+This will:
+- Build the project as a single executable
+- Install to `%LOCALAPPDATA%\git-agent`
+- Add to your user PATH
+
+#### Linux / macOS
+
+```bash
+git clone https://github.com/george-marcus/git-agent.git
+cd git-agent
+chmod +x ./scripts/install.sh
+./scripts/install.sh
+```
+
+This will:
+- Build for your platform (linux-x64, linux-arm64, osx-x64, osx-arm64)
+- Install to `~/.local/bin`
+- Add to your PATH via shell rc file
+
+#### Manual Build
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true
+```
+
+#### Install as .NET Global Tool
+
+```bash
+dotnet pack -c Release
+dotnet tool install --global --add-source ./bin/Release GitAgent
+```
+
+### Uninstall
+
+```powershell
+.\scripts\uninstall.ps1
+```
+
+```bash
+./scripts/uninstall.sh
+```
+
+## Quick Start
+
+```bash
+git-agent config set claude.apiKey sk-ant-your-key-here
+git-agent config use claude
+
+git-agent run "commit all my changes with a descriptive message"
+
+git-agent run "push to origin" --exec
+
+git-agent run "merge feature branch into main" --exec --interactive
+```
+
+## Commands
+
+### `run <instruction>`
+
+Translate a natural language instruction into git commands.
+
+```bash
+git-agent run <instruction> [options]
+```
+
+**Arguments:**
+- `<instruction>` - Natural language instruction to translate
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--exec` | `-x` | Execute the generated commands |
+| `--interactive` | `-i` | Confirm each command before execution |
+| `--provider <name>` | `-p` | Override the active provider for this run |
+| `--no-cache` | | Skip cache and force a fresh API call |
+
+**Examples:**
+```bash
+git-agent run "stage all modified files and commit with message 'fix: resolve login bug'"
+
+git-agent run "create a new branch called feature/auth" -x
+
+git-agent run "rebase onto main" -xi
+
+git-agent run "show recent commits" -p openai
+```
+
+---
+
+### `config`
+
+Manage git-agent configuration.
+
+#### `config show`
+
+Display current configuration.
+
+```bash
+git-agent config show
+```
+
+#### `config set <key> <value>`
+
+Set a configuration value.
+
+```bash
+git-agent config set <key> <value>
+```
+
+**Available keys:**
+| Key | Description |
+|-----|-------------|
+| `activeProvider` | Active provider (claude, openai, ollama, stub) |
+| `claude.apiKey` | Claude API key |
+| `claude.model` | Claude model name (default: claude-sonnet-4-20250514) |
+| `claude.baseUrl` | Claude API base URL |
+| `openai.apiKey` | OpenAI API key |
+| `openai.model` | OpenAI model name (default: gpt-4o) |
+| `openai.baseUrl` | OpenAI API base URL |
+| `ollama.model` | Ollama model name (default: llama3.2) |
+| `ollama.baseUrl` | Ollama API base URL (default: http://localhost:11434) |
+
+**Examples:**
+```bash
+git-agent config set claude.apiKey sk-ant-xxxxx
+git-agent config set openai.model gpt-4-turbo
+git-agent config set ollama.baseUrl http://192.168.1.100:11434
+```
+
+#### `config get <key>`
+
+Get a configuration value.
+
+```bash
+git-agent config get claude.model
+```
+
+#### `config use <provider>`
+
+Set the active provider.
+
+```bash
+git-agent config use <provider>
+```
+
+**Available providers:** `claude`, `openai`, `ollama`, `stub`
+
+```bash
+git-agent config use claude
+git-agent config use openai
+git-agent config use ollama
+```
+
+#### `config path`
+
+Show the configuration file path.
+
+```bash
+git-agent config path
+```
+
+#### `config reset`
+
+Reset configuration to defaults.
+
+```bash
+git-agent config reset
+```
+
+---
+
+### `providers`
+
+List available AI providers.
+
+```bash
+git-agent providers
+```
+
+**Output:**
+```
+Available providers:
+  - claude (active)
+  - openai
+  - ollama
+  - stub
+
+Use 'git-agent config use <provider>' to switch providers.
+```
+
+---
+
+### `cache`
+
+Manage HTTP response cache.
+
+#### `cache clear`
+
+Clear all cached HTTP responses.
+
+```bash
+git-agent cache clear
+```
+
+#### `cache path`
+
+Show cache directory path.
+
+```bash
+git-agent cache path
+```
+
+---
+
+## Configuration
+
+Configuration is stored in `~/.git-agent/config.json`:
+
+```json
+{
+  "activeProvider": "claude",
+  "providers": {
+    "claude": {
+      "apiKey": "sk-ant-...",
+      "model": "claude-sonnet-4-5",
+      "baseUrl": "https://api.anthropic.com"
+    },
+    "openai": {
+      "apiKey": "sk-...",
+      "model": "gpt-4o",
+      "baseUrl": "https://api.openai.com"
+    },
+    "ollama": {
+      "model": "llama3.2",
+      "baseUrl": "http://localhost:11434"
+    }
+  }
+}
+```
+
+## Safety Features
+
+Commands are validated against an allowlist and categorized by risk level:
+
+- **Safe** (green): `status`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`, `switch`, `merge`, `fetch`, `log`, `diff`, `stash`, `tag`, `remote`, `show`, `rebase`, `reset --soft`
+- **Destructive** (red): Commands with `--force`, `reset --hard`, `clean`, `push --delete`, `branch -D`
+- **Unknown** (yellow): Git commands not in the allowlist
+
+Destructive commands require explicit confirmation before execution.
+
+## Prompt Caching
+
+The tool uses API-level prompt caching to reduce costs:
+
+- **Claude**: Uses Anthropic's prompt caching beta (`anthropic-beta: prompt-caching-2024-07-31`)
+- **OpenAI**: Automatic prompt caching for supported models
+
+Cache status is displayed when available:
+```
+(prompt cache hit: 150 tokens from cache)
+(prompt cache created: 200 tokens cached)
+```
+
+## Project Structure
+
+```
+├── Program.cs                      # CLI entry point with DI setup
+├── Commands/
+│   └── CommandBuilderExtensions.cs # CLI command definitions (run, config, providers, cache)
+├── Configuration/
+│   ├── ConfigManager.cs            # Configuration loading/saving
+│   ├── GitAgentConfig.cs           # Root config model
+│   ├── ProviderConfigs.cs          # Provider config container
+│   ├── ClaudeConfig.cs             # Claude provider settings
+│   ├── OpenAIConfig.cs             # OpenAI provider settings
+│   └── OllamaConfig.cs             # Ollama provider settings
+├── Models/
+│   ├── GeneratedCommand.cs         # Generated command with risk level
+│   ├── GitTools.cs                 # Tool schema for LLM function calling
+│   └── RepoContext.cs              # Git repository context
+├── Providers/
+│   ├── IModelProvider.cs           # Provider interface
+│   ├── ProviderFactory.cs          # Provider factory with DI
+│   ├── ClaudeProvider.cs           # Anthropic Claude implementation
+│   ├── OpenAIProvider.cs           # OpenAI implementation
+│   ├── OllamaProvider.cs           # Ollama local LLM implementation
+│   └── StubProvider.cs             # Testing stub provider
+├── Services/
+│   ├── CachingHttpHandler.cs       # HTTP response caching
+│   ├── CommandExecutor.cs          # Git command execution
+│   ├── GitInspector.cs             # Git repository inspection
+│   ├── PromptBuilder.cs            # LLM prompt construction
+│   ├── ResponseParser.cs           # Text response parsing (Ollama fallback)
+│   └── SafetyValidator.cs          # Command risk validation
+├── scripts/                        # Installation scripts
+└── tests/                          # xUnit test suite
+```
+
+## License
+
+MIT
