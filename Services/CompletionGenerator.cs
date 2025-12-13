@@ -53,7 +53,7 @@ public class CompletionGenerator : ICompletionGenerator
                         return 0
                         ;;
                     conflicts)
-                        COMPREPLY=( $(compgen -W "--suggest -s --resolve -r" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "--suggest -s --resolve -r --apply -a --provider -p" -- ${cur}) )
                         return 0
                         ;;
                     completions)
@@ -61,7 +61,7 @@ public class CompletionGenerator : ICompletionGenerator
                         return 0
                         ;;
                     serve)
-                        COMPREPLY=( $(compgen -W "--port -p --mode -m" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "--port -p" -- ${cur}) )
                         return 0
                         ;;
                     use|--provider|-p)
@@ -152,6 +152,8 @@ public class CompletionGenerator : ICompletionGenerator
                                 _arguments \
                                     '(-s --suggest)'{-s,--suggest}'[Show AI-suggested resolutions]' \
                                     '(-r --resolve)'{-r,--resolve}'[Interactively resolve conflicts]' \
+                                    '(-a --apply)'{-a,--apply}'[Auto-apply AI-suggested resolutions]' \
+                                    '(-p --provider)'{-p,--provider}'[Override the active provider]:provider:($providers)' \
                                     '*:file:_files'
                                 ;;
                             completions)
@@ -159,8 +161,7 @@ public class CompletionGenerator : ICompletionGenerator
                                 ;;
                             serve)
                                 _arguments \
-                                    '(-p --port)'{-p,--port}'[Port to listen on]:port:' \
-                                    '(-m --mode)'{-m,--mode}'[Server mode]:mode:(jsonrpc http)'
+                                    '(-p --port)'{-p,--port}'[Port to listen on]:port:'
                                 ;;
                         esac
                         ;;
@@ -184,9 +185,9 @@ public class CompletionGenerator : ICompletionGenerator
                     'run' = @('--exec', '-x', '--interactive', '-i', '--provider', '-p', '--no-cache')
                     'config' = @('show', 'set', 'get', 'use', 'path', 'reset')
                     'cache' = @('clear', 'path')
-                    'conflicts' = @('--suggest', '-s', '--resolve', '-r')
+                    'conflicts' = @('--suggest', '-s', '--resolve', '-r', '--apply', '-a', '--provider', '-p')
                     'completions' = @('bash', 'zsh', 'powershell', 'fish')
-                    'serve' = @('--port', '-p', '--mode', '-m')
+                    'serve' = @('--port', '-p')
                 }
 
                 $providers = @('claude', 'openai', 'ollama', 'stub')
@@ -216,6 +217,9 @@ public class CompletionGenerator : ICompletionGenerator
 
                     # Special handling for provider selection
                     if ($command -eq 'run' -and $subcommand -in @('--provider', '-p')) {
+                        $completions = $providers
+                    }
+                    elseif ($command -eq 'conflicts' -and $subcommand -in @('--provider', '-p')) {
                         $completions = $providers
                     }
                     elseif ($command -eq 'config' -and $subcommand -eq 'use') {
@@ -279,13 +283,14 @@ public class CompletionGenerator : ICompletionGenerator
             # conflicts options
             complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s s -l suggest -d "Show AI-suggested resolutions"
             complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s r -l resolve -d "Interactively resolve conflicts"
+            complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s a -l apply -d "Auto-apply AI-suggested resolutions"
+            complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s p -l provider -d "Override the active provider" -xa "claude openai ollama stub"
 
             # completions shells
             complete -c git-agent -n "__fish_seen_subcommand_from completions" -a "bash zsh powershell fish" -d "Shell type"
 
             # serve options
             complete -c git-agent -n "__fish_seen_subcommand_from serve" -s p -l port -d "Port to listen on"
-            complete -c git-agent -n "__fish_seen_subcommand_from serve" -s m -l mode -d "Server mode" -xa "jsonrpc http"
             """;
     }
 }
