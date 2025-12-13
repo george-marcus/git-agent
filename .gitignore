@@ -160,3 +160,5 @@ Photos
 lib
 Release
 /vscode-extension/node_modules
+nupkg/GitAgent.1.0.0.nupkg
+vscode-extension/out

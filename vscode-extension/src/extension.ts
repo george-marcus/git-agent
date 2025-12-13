@@ -5,6 +5,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 let outputChannel: vscode.OutputChannel;
+let cachedExecutablePath: string | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Git Agent');
@@ -30,7 +31,29 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function getExecutablePath(): Promise<string> {
     const config = vscode.workspace.getConfiguration('git-agent');
-    return config.get('executablePath', 'git-agent');
+    const configuredPath = config.get<string>('executablePath', 'git-agent');
+
+    if (configuredPath !== 'git-agent') {
+        return configuredPath;
+    }
+
+    if (cachedExecutablePath) {
+        return cachedExecutablePath;
+    }
+
+    try {
+        await execAsync('git-agent --version');
+        cachedExecutablePath = 'git-agent';
+        return cachedExecutablePath;
+    } catch {
+        try {
+            await execAsync('dotnet tool run git-agent -- --version');
+            cachedExecutablePath = 'dotnet tool run git-agent --';
+            return cachedExecutablePath;
+        } catch {
+            return configuredPath;
+        }
+    }
 }
 
 async function getWorkspaceFolder(): Promise<string | undefined> {
@@ -44,7 +67,7 @@ async function getWorkspaceFolder(): Promise<string | undefined> {
 
 async function runGitAgent(args: string, cwd: string): Promise<{ stdout: string; stderr: string }> {
     const executable = await getExecutablePath();
-    const command = `"${executable}" ${args}`;
+    const command = `${executable} ${args}`;
 
     outputChannel.appendLine(`> ${command}`);
 
@@ -54,6 +77,13 @@ async function runGitAgent(args: string, cwd: string): Promise<{ stdout: string;
     } catch (error: any) {
         if (error.stdout) {
             return { stdout: error.stdout, stderr: error.stderr || '' };
+        }
+
+        if (error.message?.includes('not recognized') || error.message?.includes('not found')) {
+            throw new Error(
+                'git-agent not found. Install it with: dotnet tool install --global GitAgent\n' +
+                'Or set the path in settings: git-agent.executablePath'
+            );
         }
         throw error;
     }
@@ -133,23 +163,29 @@ async function runAndExecuteInstruction() {
 
     try {
         const provider = config.get('provider', 'claude');
-        const result = await runGitAgent(`run "${instruction}" --provider ${provider}`, cwd);
 
-        outputChannel.appendLine(result.stdout);
+        const previewResult = await runGitAgent(`run "${instruction}" --provider ${provider}`, cwd);
+        outputChannel.appendLine(previewResult.stdout);
 
-        const commands = parseGeneratedCommands(result.stdout);
+        const commands = parseGeneratedCommands(previewResult.stdout);
 
         if (commands.length > 0) {
             if (confirmBeforeExecute) {
                 const confirm = await vscode.window.showWarningMessage(
-                    `Execute ${commands.length} command(s)?`,
+                    `Execute ${commands.length} command(s)?\n${commands.join('\n')}`,
                     { modal: true },
                     'Execute'
                 );
                 if (confirm !== 'Execute') return;
             }
 
-            await executeCommands(commands, cwd);
+            outputChannel.appendLine('\n--- Executing via git-agent ---');
+            const execResult = await runGitAgent(`run "${instruction}" --provider ${provider} -x`, cwd);
+            outputChannel.appendLine(execResult.stdout);
+            if (execResult.stderr) {
+                outputChannel.appendLine(`[stderr] ${execResult.stderr}`);
+            }
+            vscode.window.showInformationMessage('Git Agent: Commands executed');
         }
     } catch (error: any) {
         outputChannel.appendLine(`Error: ${error.message}`);
@@ -221,7 +257,9 @@ async function showStatus() {
     if (!cwd) return;
 
     try {
-        const result = await runGitAgent('run "show status" --provider stub', cwd);
+        const config = vscode.workspace.getConfiguration('git-agent');
+        const provider = config.get('provider', 'claude');
+        const result = await runGitAgent(`run "show status" --provider ${provider}`, cwd);
 
         // Also get actual git status
         const gitResult = await execAsync('git status --short', { cwd });
@@ -266,7 +304,6 @@ function parseGeneratedCommands(output: string): string[] {
         }
 
         if (inCommandSection && line.trim().startsWith('git ')) {
-            // Remove ANSI escape codes and extract command
             const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim();
             commands.push(cleanLine);
         }
