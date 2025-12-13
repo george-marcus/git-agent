@@ -39,7 +39,7 @@ jobs:
 
       - name: Publish
         run: |
-          dotnet publish -c Release -r ${{ matrix.rid }} \
+          dotnet publish GitAgentCli.csproj -c Release -r ${{ matrix.rid }} \
             -p:PublishSingleFile=true \
             -p:PublishTrimmed=true \
             -p:SelfContained=true \
