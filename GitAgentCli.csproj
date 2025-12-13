@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>git-agent</AssemblyName>
 
+    <UseAppHost>true</UseAppHost>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>git-agent</ToolCommandName>
     <PackageId>GitAgent</PackageId>
