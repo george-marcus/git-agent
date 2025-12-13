@@ -83,7 +83,7 @@ public class ClaudeProvider : IModelProvider
         }
     }
 
-    private ClaudeRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, object inputSchema, int maxTokens) => new()
+    private ClaudeRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, JsonSchema inputSchema, int maxTokens) => new()
     {
         Model = _config.Model,
         MaxTokens = maxTokens,
@@ -186,7 +186,7 @@ internal class ClaudeTool
 {
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
-    public object? InputSchema { get; set; }
+    public JsonSchema? InputSchema { get; set; }
     public CacheControl? CacheControl { get; set; }
 }
 

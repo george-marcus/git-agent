@@ -85,7 +85,7 @@ public class OpenAIProvider : IModelProvider
         }
     }
 
-    private OpenAIRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, object parameters, int maxTokens) => new()
+    private OpenAIRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, JsonSchema parameters, int maxTokens) => new()
     {
         Model = _config.Model,
         MaxCompletionTokens = maxTokens,
@@ -183,7 +183,7 @@ internal class OpenAIFunction
 {
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
-    public object? Parameters { get; set; }
+    public JsonSchema? Parameters { get; set; }
 }
 
 internal class OpenAIToolChoice

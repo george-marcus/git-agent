@@ -27,6 +27,10 @@ internal partial class CacheJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(ClaudeResponse))]
 [JsonSerializable(typeof(GitToolInput))]
 [JsonSerializable(typeof(ConflictToolInput))]
+[JsonSerializable(typeof(JsonSchema))]
+[JsonSerializable(typeof(JsonSchemaProperty))]
+[JsonSerializable(typeof(JsonSchemaItems))]
+[JsonSerializable(typeof(Dictionary<string, JsonSchemaProperty>))]
 internal partial class ClaudeJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(
@@ -36,6 +40,10 @@ internal partial class ClaudeJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(OpenAIResponse))]
 [JsonSerializable(typeof(GitToolInput))]
 [JsonSerializable(typeof(ConflictToolInput))]
+[JsonSerializable(typeof(JsonSchema))]
+[JsonSerializable(typeof(JsonSchemaProperty))]
+[JsonSerializable(typeof(JsonSchemaItems))]
+[JsonSerializable(typeof(Dictionary<string, JsonSchemaProperty>))]
 internal partial class OpenAIJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(

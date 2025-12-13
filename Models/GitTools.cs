@@ -45,67 +45,67 @@ public static class GitTools
         Analyze both sides of the conflict and produce a merged result that preserves the intent of both changes.
         """;
 
-    public static object GetConflictInputSchema() => new
+    public static JsonSchema GetConflictInputSchema() => new()
     {
-        type = "object",
-        properties = new
+        Type = "object",
+        Properties = new Dictionary<string, JsonSchemaProperty>
         {
-            resolved_content = new
+            ["resolved_content"] = new()
             {
-                type = "string",
-                description = "The resolved content that should replace the conflict markers. This should be the final merged code without any conflict markers."
+                Type = "string",
+                Description = "The resolved content that should replace the conflict markers. This should be the final merged code without any conflict markers."
             },
-            explanation = new
+            ["explanation"] = new()
             {
-                type = "string",
-                description = "Brief explanation of how the conflict was resolved and what changes were kept from each side."
+                Type = "string",
+                Description = "Brief explanation of how the conflict was resolved and what changes were kept from each side."
             },
-            confidence = new
+            ["confidence"] = new()
             {
-                type = "string",
-                @enum = new[] { "low", "medium", "high" },
-                description = "Confidence level in the resolution: 'high' for straightforward merges, 'medium' for complex but clear merges, 'low' for ambiguous cases that need human review."
+                Type = "string",
+                Enum = ["low", "medium", "high"],
+                Description = "Confidence level in the resolution: 'high' for straightforward merges, 'medium' for complex but clear merges, 'low' for ambiguous cases that need human review."
             }
         },
-        required = new[] { "resolved_content", "explanation", "confidence" }
+        Required = ["resolved_content", "explanation", "confidence"]
     };
 
-    public static object GetInputSchema() => new
+    public static JsonSchema GetInputSchema() => new()
     {
-        type = "object",
-        properties = new
+        Type = "object",
+        Properties = new Dictionary<string, JsonSchemaProperty>
         {
-            commands = new
+            ["commands"] = new()
             {
-                type = "array",
-                description = "List of git commands to execute in order",
-                items = new
+                Type = "array",
+                Description = "List of git commands to execute in order",
+                Items = new JsonSchemaItems
                 {
-                    type = "object",
-                    properties = new
+                    Type = "object",
+                    Properties = new Dictionary<string, JsonSchemaProperty>
                     {
-                        command = new
+                        ["command"] = new()
                         {
-                            type = "string",
-                            description = "The full git command to execute (e.g., 'git add .', 'git commit -m \"message\"')"
+                            Type = "string",
+                            Description = "The full git command to execute (e.g., 'git add .', 'git commit -m \"message\"')"
                         },
-                        risk = new
+                        ["risk"] = new()
                         {
-                            type = "string",
-                            @enum = new[] { "safe", "moderate", "destructive" },
-                            description = "Risk level: 'safe' for read-only or reversible operations, 'moderate' for operations that modify state, 'destructive' for operations that can cause data loss"
+                            Type = "string",
+                            Enum = ["safe", "moderate", "destructive"],
+                            Description = "Risk level: 'safe' for read-only or reversible operations, 'moderate' for operations that modify state, 'destructive' for operations that can cause data loss"
                         },
-                        reason = new
+                        ["reason"] = new()
                         {
-                            type = "string",
-                            description = "Brief explanation of why this command is needed or why it's marked as destructive"
+                            Type = "string",
+                            Description = "Brief explanation of why this command is needed or why it's marked as destructive"
                         }
                     },
-                    required = new[] { "command", "risk" }
+                    Required = ["command", "risk"]
                 }
             }
         },
-        required = new[] { "commands" }
+        Required = ["commands"]
     };
 }
 
@@ -145,3 +145,46 @@ public class ConflictToolInput
     [JsonPropertyName("confidence")]
     public string Confidence { get; set; } = "low";
 }
+
+#region JSON Schema Classes for Tool Definitions
+
+public class JsonSchema
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "object";
+
+    [JsonPropertyName("properties")]
+    public Dictionary<string, JsonSchemaProperty>? Properties { get; set; }
+
+    [JsonPropertyName("required")]
+    public string[]? Required { get; set; }
+}
+
+public class JsonSchemaProperty
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "string";
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("enum")]
+    public string[]? Enum { get; set; }
+
+    [JsonPropertyName("items")]
+    public JsonSchemaItems? Items { get; set; }
+}
+
+public class JsonSchemaItems
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "object";
+
+    [JsonPropertyName("properties")]
+    public Dictionary<string, JsonSchemaProperty>? Properties { get; set; }
+
+    [JsonPropertyName("required")]
+    public string[]? Required { get; set; }
+}
+
+#endregion
