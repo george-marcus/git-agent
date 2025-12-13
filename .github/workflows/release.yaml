@@ -38,12 +38,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish
-        run: |
-          dotnet publish GitAgentCli.csproj -c Release -r ${{ matrix.rid }} \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=true \
-            -p:SelfContained=true \
-            -o ./publish
+        run: dotnet publish GitAgentCli.csproj -c Release -r ${{ matrix.rid }} -p:PublishSingleFile=true -p:PublishTrimmed=true -p:SelfContained=true -o ./publish
 
       - name: Rename artifact (Unix)
         if: runner.os != 'Windows'
