@@ -12,19 +12,7 @@ public class ClaudeProvider : IModelProvider
     private readonly IPromptBuilder _promptBuilder;
     private readonly HttpClient _httpClient;
 
-    private const string SystemPrompt = """
-        You are a git command generator. Your task is to translate natural language instructions into git commands.
-
-        Rules:
-        - Use the execute_git_commands tool to return the commands
-        - Prefer safe operations (status, add, commit, push, branch, checkout, fetch, pull)
-        - Mark destructive commands (reset --hard, clean -fd, force push, branch -D) with risk 'destructive'
-        - Mark commands that modify state (commit, push, merge) with risk 'moderate'
-        - Mark read-only commands (status, log, diff, branch --list) with risk 'safe'
-        - Return commands in the order they should be executed
-        """;
-
-    public ClaudeProvider(ClaudeConfig config, IPromptBuilder promptBuilder, IResponseParser responseParser, CachingHttpHandler cachingHandler)
+    public ClaudeProvider(ClaudeConfig config, IPromptBuilder promptBuilder, CachingHttpHandler cachingHandler)
     {
         _config = config;
         _promptBuilder = promptBuilder;
@@ -37,48 +25,83 @@ public class ClaudeProvider : IModelProvider
 
     public async Task<IReadOnlyList<GeneratedCommand>> GenerateGitCommands(string instruction, RepoContext context)
     {
+        EnsureApiKeyConfigured();
+
+        var userPrompt = _promptBuilder.BuildCommandUserPrompt(instruction, context);
+        var request = BuildRequest(GitTools.GitCommandSystemPrompt, userPrompt, GitTools.ToolName, GitTools.ToolDescription, GitTools.GetInputSchema(), 1024);
+
+        var result = await SendRequestAsync(request);
+        LogCacheUsage(result);
+
+        var toolInput = ExtractToolInput(result, ClaudeJsonContext.Default.GitToolInput);
+        if (toolInput?.Commands != null)
+        {
+            return toolInput.Commands.Select(c => c.ToGeneratedCommand()).ToList();
+        }
+
+        if (result?.Content?.Any(c => c.Type == "text" && !string.IsNullOrEmpty(c.Text)) == true)
+        {
+            Console.Error.WriteLine("Warning: Model returned text instead of tool call");
+        }
+
+        return [];
+    }
+
+    public async Task<ConflictResolutionResult> GenerateConflictResolution(ConflictSection conflict, string filePath, string fileExtension)
+    {
+        EnsureApiKeyConfigured();
+
+        var userPrompt = _promptBuilder.BuildConflictUserPrompt(conflict, filePath, fileExtension);
+        var request = BuildRequest(GitTools.ConflictSystemPrompt, userPrompt, GitTools.ConflictToolName, GitTools.ConflictToolDescription, GitTools.GetConflictInputSchema(), 4096);
+
+        var result = await SendRequestAsync(request);
+
+        var toolInput = ExtractToolInput(result, ClaudeJsonContext.Default.ConflictToolInput);
+        if (toolInput != null)
+        {
+            return new ConflictResolutionResult
+            {
+                ResolvedContent = toolInput.ResolvedContent,
+                Explanation = toolInput.Explanation,
+                Confidence = ParseConfidence(toolInput.Confidence)
+            };
+        }
+
+        return new ConflictResolutionResult
+        {
+            ResolvedContent = conflict.OursContent,
+            Explanation = "Failed to generate AI resolution, defaulting to 'ours'",
+            Confidence = ResolutionConfidence.Low
+        };
+    }
+
+    private void EnsureApiKeyConfigured()
+    {
         if (string.IsNullOrWhiteSpace(_config.ApiKey))
         {
             throw new InvalidOperationException("Claude API key not configured. Run: git-agent config set claude.apiKey <your-key>");
         }
+    }
 
-        var prompt = _promptBuilder.BuildPrompt(instruction, context);
+    private ClaudeRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, object inputSchema, int maxTokens) => new()
+    {
+        Model = _config.Model,
+        MaxTokens = maxTokens,
+        System =
+        [
+            new() { Type = "text", Text = systemPrompt, CacheControl = new CacheControl { Type = "ephemeral" } }
+        ],
+        Tools =
+        [
+            new() { Name = toolName, Description = toolDescription, InputSchema = inputSchema, CacheControl = new CacheControl { Type = "ephemeral" } }
+        ],
+        ToolChoice = new ClaudeToolChoice { Type = "tool", Name = toolName },
+        Messages = [new() { Role = "user", Content = userPrompt }]
+    };
 
-        var requestBody = new ClaudeRequest
-        {
-            Model = _config.Model,
-            MaxTokens = 1024,
-            System = new List<ClaudeSystemBlock>
-            {
-                new()
-                {
-                    Type = "text",
-                    Text = SystemPrompt,
-                    CacheControl = new CacheControl { Type = "ephemeral" }
-                }
-            },
-            Tools = new List<ClaudeTool>
-            {
-                new()
-                {
-                    Name = GitTools.ToolName,
-                    Description = GitTools.ToolDescription,
-                    InputSchema = GitTools.GetInputSchema(),
-                    CacheControl = new CacheControl { Type = "ephemeral" }
-                }
-            },
-            ToolChoice = new ClaudeToolChoice { Type = "tool", Name = GitTools.ToolName },
-            Messages = new List<ClaudeMessage>
-            {
-                new()
-                {
-                    Role = "user",
-                    Content = prompt
-                }
-            }
-        };
-
-        var json = JsonSerializer.Serialize(requestBody, ClaudeJsonContext.Default.ClaudeRequest);
+    private async Task<ClaudeResponse?> SendRequestAsync(ClaudeRequest request)
+    {
+        var json = JsonSerializer.Serialize(request, ClaudeJsonContext.Default.ClaudeRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         _httpClient.DefaultRequestHeaders.Clear();
@@ -96,46 +119,43 @@ public class ClaudeProvider : IModelProvider
                 throw new HttpRequestException($"Claude API error ({response.StatusCode}): {responseJson}");
             }
 
-            var result = JsonSerializer.Deserialize(responseJson, ClaudeJsonContext.Default.ClaudeResponse);
-
-            if (result?.Usage != null)
-            {
-                if (result.Usage.CacheReadInputTokens > 0)
-                {
-                    Console.WriteLine($"(prompt cache hit: {result.Usage.CacheReadInputTokens} tokens from cache)");
-                }
-                else if (result.Usage.CacheCreationInputTokens > 0)
-                {
-                    Console.WriteLine($"(prompt cache created: {result.Usage.CacheCreationInputTokens} tokens cached)");
-                }
-            }
-
-            var toolUse = result?.Content?.FirstOrDefault(c => c.Type == "tool_use");
-            if (toolUse?.Input != null)
-            {
-                var inputJson = toolUse.Input.Value.GetRawText();
-                var toolInput = JsonSerializer.Deserialize(inputJson, ClaudeJsonContext.Default.GitToolInput);
-
-                if (toolInput?.Commands != null)
-                {
-                    return toolInput.Commands.Select(c => c.ToGeneratedCommand()).ToList();
-                }
-            }
-
-            var textContent = result?.Content?.FirstOrDefault(c => c.Type == "text")?.Text;
-            if (!string.IsNullOrEmpty(textContent))
-            {
-                Console.Error.WriteLine("Warning: Model returned text instead of tool call");
-                return [];
-            }
-
-            return [];
+            return JsonSerializer.Deserialize(responseJson, ClaudeJsonContext.Default.ClaudeResponse);
         }
         catch (TaskCanceledException)
         {
             throw new TimeoutException("Claude API request timed out after 60 seconds.");
         }
     }
+
+    private static void LogCacheUsage(ClaudeResponse? result)
+    {
+        if (result?.Usage == null) return;
+
+        if (result.Usage.CacheReadInputTokens > 0)
+        {
+            Console.WriteLine($"(prompt cache hit: {result.Usage.CacheReadInputTokens} tokens from cache)");
+        }
+        else if (result.Usage.CacheCreationInputTokens > 0)
+        {
+            Console.WriteLine($"(prompt cache created: {result.Usage.CacheCreationInputTokens} tokens cached)");
+        }
+    }
+
+    private static T? ExtractToolInput<T>(ClaudeResponse? result, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
+    {
+        var toolUse = result?.Content?.FirstOrDefault(c => c.Type == "tool_use");
+        if (toolUse?.Input == null) return default;
+
+        var inputJson = toolUse.Input.Value.GetRawText();
+        return JsonSerializer.Deserialize(inputJson, typeInfo);
+    }
+
+    private static ResolutionConfidence ParseConfidence(string confidence) => confidence.ToLowerInvariant() switch
+    {
+        "high" => ResolutionConfidence.High,
+        "medium" => ResolutionConfidence.Medium,
+        _ => ResolutionConfidence.Low
+    };
 }
 
 #region Claude API Models

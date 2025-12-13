@@ -159,3 +159,4 @@ Photos
 .vs
 lib
 Release
+/vscode-extension/node_modules

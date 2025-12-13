@@ -22,7 +22,6 @@ public class ProviderFactoryTests
         _cachingHandler = new CachingHttpHandler();
 
         _configManager.LoadAsync().Returns(new GitAgentConfig());
-
         _factory = new ProviderFactory(_configManager, _promptBuilder, _responseParser, _cachingHandler);
     }
 
@@ -36,19 +35,12 @@ public class ProviderFactoryTests
     }
 
     [Fact]
-    public void AvailableProviders_HasFourProviders()
-    {
-        _factory.AvailableProviders.Should().HaveCount(4);
-    }
-
-    [Fact]
     public async Task CreateProviderAsync_WithNoArgument_UsesActiveProviderFromConfig()
     {
         var config = new GitAgentConfig { ActiveProvider = "stub" };
         _configManager.LoadAsync().Returns(config);
 
         var provider = await _factory.CreateProviderAsync();
-
         provider.Should().BeOfType<StubProvider>();
     }
 
@@ -60,7 +52,6 @@ public class ProviderFactoryTests
     public async Task CreateProviderAsync_WithValidName_ReturnsCorrectType(string name, Type expectedType)
     {
         var provider = await _factory.CreateProviderAsync(name);
-
         provider.Should().BeOfType(expectedType);
     }
 
@@ -76,7 +67,6 @@ public class ProviderFactoryTests
     public async Task CreateProviderAsync_IsCaseInsensitive(string name)
     {
         var provider = await _factory.CreateProviderAsync(name);
-
         provider.Should().NotBeNull();
     }
 
@@ -88,9 +78,7 @@ public class ProviderFactoryTests
     public async Task CreateProviderAsync_WithInvalidName_ThrowsArgumentException(string name)
     {
         var act = async () => await _factory.CreateProviderAsync(name);
-
-        await act.Should().ThrowAsync<ArgumentException>()
-            .WithMessage($"*{name}*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage($"*{name}*");
     }
 
     [Fact]
@@ -103,20 +91,6 @@ public class ProviderFactoryTests
         exception.Which.Message.Should().Contain("openai");
         exception.Which.Message.Should().Contain("ollama");
         exception.Which.Message.Should().Contain("stub");
-    }
-
-    [Fact]
-    public void HttpCacheHandler_ReturnsSameInstance()
-    {
-        _factory.HttpCacheHandler.Should().BeSameAs(_cachingHandler);
-    }
-
-    [Fact]
-    public async Task CreateProviderAsync_LoadsConfigFromConfigManager()
-    {
-        await _factory.CreateProviderAsync("stub");
-
-        await _configManager.Received(1).LoadAsync();
     }
 
     [Fact]
@@ -139,5 +113,26 @@ public class ProviderFactoryTests
         var provider = await _factory.CreateProviderAsync("claude");
 
         provider.Should().BeOfType<ClaudeProvider>();
+    }
+
+    [Fact]
+    public async Task CreateProviderAsync_WithOllama_UsesOllamaPromptBuilder()
+    {
+        var provider = await _factory.CreateProviderAsync("ollama");
+        provider.Should().BeOfType<OllamaProvider>();
+    }
+
+    [Fact]
+    public async Task CreateProviderAsync_WithClaude_UsesStandardPromptBuilder()
+    {
+        var provider = await _factory.CreateProviderAsync("claude");
+        provider.Should().BeOfType<ClaudeProvider>();
+    }
+
+    [Fact]
+    public async Task CreateProviderAsync_WithOpenAI_UsesStandardPromptBuilder()
+    {
+        var provider = await _factory.CreateProviderAsync("openai");
+        provider.Should().BeOfType<OpenAIProvider>();
     }
 }

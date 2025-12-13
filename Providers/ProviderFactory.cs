@@ -1,4 +1,3 @@
-using GitAgent.Models;
 using GitAgent.Services;
 
 namespace GitAgent.Providers;
@@ -47,9 +46,9 @@ public class ProviderFactory : IProviderFactory
 
         return providerName.ToLowerInvariant() switch
         {
-            "claude" => new ClaudeProvider(config.Providers.Claude, _promptBuilder, _responseParser, HttpCacheHandler),
-            "openai" => new OpenAIProvider(config.Providers.OpenAI, _promptBuilder, _responseParser, HttpCacheHandler),
-            "ollama" => new OllamaProvider(config.Providers.Ollama, _promptBuilder, _responseParser),
+            "claude" => new ClaudeProvider(config.Providers.Claude, _promptBuilder, HttpCacheHandler),
+            "openai" => new OpenAIProvider(config.Providers.OpenAI, _promptBuilder, HttpCacheHandler),
+            "ollama" => new OllamaProvider(config.Providers.Ollama, new OllamaPromptBuilder(), _responseParser),
             "stub" => new StubProvider(),
             _ => throw new ArgumentException($"Unknown provider: '{providerName}'. Available: {string.Join(", ", AvailableProviders)}")
         };

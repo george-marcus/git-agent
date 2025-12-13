@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using GitAgent.Configuration;
 using GitAgent.Models;
 using GitAgent.Services;
@@ -13,19 +14,7 @@ public class OpenAIProvider : IModelProvider
     private readonly IPromptBuilder _promptBuilder;
     private readonly HttpClient _httpClient;
 
-    private const string SystemPrompt = """
-        You are a git command generator. Your task is to translate natural language instructions into git commands.
-
-        Rules:
-        - Use the execute_git_commands function to return the commands
-        - Prefer safe operations (status, add, commit, push, branch, checkout, fetch, pull)
-        - Mark destructive commands (reset --hard, clean -fd, force push, branch -D) with risk 'destructive'
-        - Mark commands that modify state (commit, push, merge) with risk 'moderate'
-        - Mark read-only commands (status, log, diff, branch --list) with risk 'safe'
-        - Return commands in the order they should be executed
-        """;
-
-    public OpenAIProvider(OpenAIConfig config, IPromptBuilder promptBuilder, IResponseParser responseParser, CachingHttpHandler cachingHandler)
+    public OpenAIProvider(OpenAIConfig config, IPromptBuilder promptBuilder, CachingHttpHandler cachingHandler)
     {
         _config = config;
         _promptBuilder = promptBuilder;
@@ -38,48 +27,91 @@ public class OpenAIProvider : IModelProvider
 
     public async Task<IReadOnlyList<GeneratedCommand>> GenerateGitCommands(string instruction, RepoContext context)
     {
+        EnsureApiKeyConfigured();
+
+        var usePrompt = _promptBuilder.BuildCommandUserPrompt(instruction, context);
+        var request = BuildRequest(GitTools.GitCommandSystemPrompt, usePrompt, GitTools.ToolName, GitTools.ToolDescription, GitTools.GetInputSchema(), 1024);
+
+        var result = await SendRequestAsync(request);
+        LogCacheUsage(result);
+
+        var toolInput = ExtractToolInput(result, OpenAIJsonContext.Default.GitToolInput);
+        if (toolInput?.Commands != null)
+        {
+            return toolInput.Commands.Select(c => c.ToGeneratedCommand()).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(result?.Choices?.FirstOrDefault()?.Message?.Content))
+        {
+            Console.Error.WriteLine("Warning: Model returned text instead of tool call");
+        }
+
+        return [];
+    }
+
+    public async Task<ConflictResolutionResult> GenerateConflictResolution(ConflictSection conflict, string filePath, string fileExtension)
+    {
+        EnsureApiKeyConfigured();
+
+        var userPrompt = _promptBuilder.BuildConflictUserPrompt(conflict, filePath, fileExtension);
+        var request = BuildRequest(GitTools.ConflictSystemPrompt, userPrompt, GitTools.ConflictToolName, GitTools.ConflictToolDescription, GitTools.GetConflictInputSchema(), 4096);
+
+        var result = await SendRequestAsync(request);
+
+        var toolInput = ExtractToolInput(result, OpenAIJsonContext.Default.ConflictToolInput);
+        if (toolInput != null)
+        {
+            return new ConflictResolutionResult
+            {
+                ResolvedContent = toolInput.ResolvedContent,
+                Explanation = toolInput.Explanation,
+                Confidence = ParseConfidence(toolInput.Confidence)
+            };
+        }
+
+        return new ConflictResolutionResult
+        {
+            ResolvedContent = conflict.OursContent,
+            Explanation = "Failed to generate AI resolution, defaulting to 'ours'",
+            Confidence = ResolutionConfidence.Low
+        };
+    }
+
+    private void EnsureApiKeyConfigured()
+    {
         if (string.IsNullOrWhiteSpace(_config.ApiKey))
         {
             throw new InvalidOperationException("OpenAI API key not configured. Run: git-agent config set openai.apiKey <your-key>");
         }
+    }
 
-        var prompt = _promptBuilder.BuildPrompt(instruction, context);
-
-        var requestBody = new OpenAIRequest
-        {
-            Model = _config.Model,
-            MaxCompletionTokens = 1024,
-            Messages =
-            [
-                new OpenAIRequestMessage { Role = "system", Content = SystemPrompt },
-                new OpenAIRequestMessage { Role = "user", Content = prompt }
-            ],
-            Tools =
-            [
-                new OpenAITool
-                {
-                    Type = "function",
-                    Function = new OpenAIFunction
-                    {
-                        Name = GitTools.ToolName,
-                        Description = GitTools.ToolDescription,
-                        Parameters = GitTools.GetInputSchema()
-                    }
-                }
-            ],
-            ToolChoice = new OpenAIToolChoice
+    private OpenAIRequest BuildRequest(string systemPrompt, string userPrompt, string toolName, string toolDescription, object parameters, int maxTokens) => new()
+    {
+        Model = _config.Model,
+        MaxCompletionTokens = maxTokens,
+        Messages =
+        [
+            new OpenAIRequestMessage { Role = "system", Content = systemPrompt },
+            new OpenAIRequestMessage { Role = "user", Content = userPrompt }
+        ],
+        Tools =
+        [
+            new OpenAITool
             {
                 Type = "function",
-                Function = new OpenAIFunctionName { Name = GitTools.ToolName }
+                Function = new OpenAIFunction { Name = toolName, Description = toolDescription, Parameters = parameters }
             }
-        };
+        ],
+        ToolChoice = new OpenAIToolChoice { Type = "function", Function = new OpenAIFunctionName { Name = toolName } }
+    };
 
-        var json = JsonSerializer.Serialize(requestBody, OpenAIJsonContext.Default.OpenAIRequest);
+    private async Task<OpenAIResponse?> SendRequestAsync(OpenAIRequest request)
+    {
+        var json = JsonSerializer.Serialize(request, OpenAIJsonContext.Default.OpenAIRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", _config.ApiKey);
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiKey);
 
         try
         {
@@ -91,42 +123,37 @@ public class OpenAIProvider : IModelProvider
                 throw new HttpRequestException($"OpenAI API error ({response.StatusCode}): {responseJson}");
             }
 
-            var result = JsonSerializer.Deserialize(responseJson, OpenAIJsonContext.Default.OpenAIResponse);
-
-            if (result?.Usage != null)
-            {
-                var cachedTokens = result.Usage.PromptTokensDetails?.CachedTokens ?? 0;
-                if (cachedTokens > 0)
-                {
-                    Console.WriteLine($"(prompt cache hit: {cachedTokens} tokens from cache)");
-                }
-            }
-
-            var toolCall = result?.Choices?.FirstOrDefault()?.Message?.ToolCalls?.FirstOrDefault();
-            if (toolCall?.Function?.Arguments != null)
-            {
-                var toolInput = JsonSerializer.Deserialize(toolCall.Function.Arguments, OpenAIJsonContext.Default.GitToolInput);
-
-                if (toolInput?.Commands != null)
-                {
-                    return toolInput.Commands.Select(c => c.ToGeneratedCommand()).ToList();
-                }
-            }
-
-            var textContent = result?.Choices?.FirstOrDefault()?.Message?.Content;
-            if (!string.IsNullOrEmpty(textContent))
-            {
-                Console.Error.WriteLine("Warning: Model returned text instead of tool call");
-                return [];
-            }
-
-            return [];
+            return JsonSerializer.Deserialize(responseJson, OpenAIJsonContext.Default.OpenAIResponse);
         }
         catch (TaskCanceledException)
         {
             throw new TimeoutException("OpenAI API request timed out after 60 seconds.");
         }
     }
+
+    private static void LogCacheUsage(OpenAIResponse? result)
+    {
+        var cachedTokens = result?.Usage?.PromptTokensDetails?.CachedTokens ?? 0;
+        if (cachedTokens > 0)
+        {
+            Console.WriteLine($"(prompt cache hit: {cachedTokens} tokens from cache)");
+        }
+    }
+
+    private static T? ExtractToolInput<T>(OpenAIResponse? result, JsonTypeInfo<T> typeInfo)
+    {
+        var arguments = result?.Choices?.FirstOrDefault()?.Message?.ToolCalls?.FirstOrDefault()?.Function?.Arguments;
+        if (arguments == null) return default;
+
+        return JsonSerializer.Deserialize(arguments, typeInfo);
+    }
+
+    private static ResolutionConfidence ParseConfidence(string confidence) => confidence.ToLowerInvariant() switch
+    {
+        "high" => ResolutionConfidence.High,
+        "medium" => ResolutionConfidence.Medium,
+        _ => ResolutionConfidence.Low
+    };
 }
 
 #region OpenAI API Models

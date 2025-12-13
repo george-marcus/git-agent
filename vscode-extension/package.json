@@ -1,0 +1,117 @@
+{
+  "name": "git-agent",
+  "displayName": "Git Agent",
+  "description": "AI-powered natural language to git commands",
+  "version": "1.0.0",
+  "publisher": "git-agent",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "git",
+    "ai",
+    "natural language",
+    "automation"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "git-agent.run",
+        "title": "Git Agent: Run Instruction"
+      },
+      {
+        "command": "git-agent.runAndExecute",
+        "title": "Git Agent: Run & Execute Instruction"
+      },
+      {
+        "command": "git-agent.conflicts",
+        "title": "Git Agent: Analyze Conflicts"
+      },
+      {
+        "command": "git-agent.suggestResolutions",
+        "title": "Git Agent: Suggest Conflict Resolutions"
+      },
+      {
+        "command": "git-agent.setProvider",
+        "title": "Git Agent: Set Provider"
+      },
+      {
+        "command": "git-agent.showStatus",
+        "title": "Git Agent: Show Status"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "git-agent.run",
+        "key": "ctrl+shift+g ctrl+shift+r",
+        "mac": "cmd+shift+g cmd+shift+r"
+      },
+      {
+        "command": "git-agent.runAndExecute",
+        "key": "ctrl+shift+g ctrl+shift+e",
+        "mac": "cmd+shift+g cmd+shift+e"
+      }
+    ],
+    "configuration": {
+      "title": "Git Agent",
+      "properties": {
+        "git-agent.provider": {
+          "type": "string",
+          "default": "claude",
+          "enum": [
+            "claude",
+            "openai",
+            "ollama",
+            "stub"
+          ],
+          "description": "AI provider to use for git command generation"
+        },
+        "git-agent.executablePath": {
+          "type": "string",
+          "default": "git-agent",
+          "description": "Path to the git-agent executable"
+        },
+        "git-agent.showOutputPanel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show output panel when running commands"
+        },
+        "git-agent.confirmBeforeExecute": {
+          "type": "boolean",
+          "default": true,
+          "description": "Confirm before executing generated commands"
+        }
+      }
+    },
+    "menus": {
+      "scm/title": [
+        {
+          "command": "git-agent.run",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  }
+}

@@ -55,8 +55,40 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ./publish/${{ matrix.artifact }}
 
+  build-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./vscode-extension
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: ./vscode-extension
+        run: npm run compile
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package extension
+        working-directory: ./vscode-extension
+        run: vsce package -o git-agent.vsix
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-agent-vscode-extension
+          path: ./vscode-extension/git-agent.vsix
+
   release:
-    needs: build
+    needs: [build, build-extension]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -76,6 +108,7 @@ jobs:
             ./artifacts/git-agent-win-x64.exe/git-agent-win-x64.exe
             ./artifacts/git-agent-osx-x64/git-agent-osx-x64
             ./artifacts/git-agent-osx-arm64/git-agent-osx-arm64
+            ./artifacts/git-agent-vscode-extension/git-agent.vsix
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

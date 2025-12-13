@@ -47,6 +47,72 @@ public class GitToolsTests
         json.Should().Contain("\"required\"");
         json.Should().Contain("\"commands\"");
     }
+
+    [Fact]
+    public void GitCommandSystemPrompt_ContainsKeyInstructions()
+    {
+        GitTools.GitCommandSystemPrompt.Should().Contain("git command generator");
+        GitTools.GitCommandSystemPrompt.Should().Contain("execute_git_commands");
+        GitTools.GitCommandSystemPrompt.Should().Contain("destructive");
+        GitTools.GitCommandSystemPrompt.Should().Contain("safe");
+    }
+
+    [Fact]
+    public void ConflictSystemPrompt_ContainsKeyInstructions()
+    {
+        GitTools.ConflictSystemPrompt.Should().Contain("merge");
+        GitTools.ConflictSystemPrompt.Should().Contain("conflict");
+        GitTools.ConflictSystemPrompt.Should().Contain("resolve_conflict");
+        GitTools.ConflictSystemPrompt.Should().Contain("confidence");
+    }
+
+    [Fact]
+    public void ConflictToolName_ReturnsExpectedValue()
+    {
+        GitTools.ConflictToolName.Should().Be("resolve_conflict");
+    }
+
+    [Fact]
+    public void ConflictToolDescription_ContainsKeyInformation()
+    {
+        GitTools.ConflictToolDescription.Should().Contain("conflict");
+        GitTools.ConflictToolDescription.Should().Contain("resolved");
+    }
+
+    [Fact]
+    public void GetConflictInputSchema_ReturnsValidSchema()
+    {
+        var schema = GitTools.GetConflictInputSchema();
+
+        schema.Should().NotBeNull();
+        var json = JsonSerializer.Serialize(schema);
+        json.Should().Contain("resolved_content");
+        json.Should().Contain("explanation");
+        json.Should().Contain("confidence");
+    }
+
+    [Fact]
+    public void GetConflictInputSchema_HasRequiredFields()
+    {
+        var schema = GitTools.GetConflictInputSchema();
+        var json = JsonSerializer.Serialize(schema);
+
+        json.Should().Contain("\"required\"");
+        json.Should().Contain("resolved_content");
+        json.Should().Contain("explanation");
+        json.Should().Contain("confidence");
+    }
+
+    [Fact]
+    public void GetConflictInputSchema_ConfidenceHasEnum()
+    {
+        var schema = GitTools.GetConflictInputSchema();
+        var json = JsonSerializer.Serialize(schema);
+
+        json.Should().Contain("low");
+        json.Should().Contain("medium");
+        json.Should().Contain("high");
+    }
 }
 
 public class GitToolInputTests
@@ -188,5 +254,79 @@ public class GitToolCommandTests
         var result = toolCommand.ToGeneratedCommand();
 
         result.CommandText.Should().Be("git commit -m \"feat: add 'quotes' & special <chars>\"");
+    }
+}
+
+public class ConflictToolInputTests
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
+    [Fact]
+    public void Deserialize_WithValidJson_ReturnsConflictToolInput()
+    {
+        var json = """
+            {
+                "resolved_content": "merged code here",
+                "explanation": "Combined both changes",
+                "confidence": "high"
+            }
+            """;
+
+        var result = JsonSerializer.Deserialize<ConflictToolInput>(json, JsonOptions);
+
+        result.Should().NotBeNull();
+        result!.ResolvedContent.Should().Be("merged code here");
+        result.Explanation.Should().Be("Combined both changes");
+        result.Confidence.Should().Be("high");
+    }
+
+    [Fact]
+    public void DefaultValues_AreCorrect()
+    {
+        var input = new ConflictToolInput();
+
+        input.ResolvedContent.Should().BeEmpty();
+        input.Explanation.Should().BeEmpty();
+        input.Confidence.Should().Be("low");
+    }
+
+    [Theory]
+    [InlineData("low")]
+    [InlineData("medium")]
+    [InlineData("high")]
+    public void Confidence_AcceptsValidValues(string confidence)
+    {
+        var json = $$"""
+            {
+                "resolved_content": "code",
+                "explanation": "test",
+                "confidence": "{{confidence}}"
+            }
+            """;
+
+        var result = JsonSerializer.Deserialize<ConflictToolInput>(json, JsonOptions);
+
+        result.Should().NotBeNull();
+        result!.Confidence.Should().Be(confidence);
+    }
+
+    [Fact]
+    public void Deserialize_WithMultilineContent_PreservesNewlines()
+    {
+        var json = """
+            {
+                "resolved_content": "line1\nline2\nline3",
+                "explanation": "Preserved formatting",
+                "confidence": "high"
+            }
+            """;
+
+        var result = JsonSerializer.Deserialize<ConflictToolInput>(json, JsonOptions);
+
+        result.Should().NotBeNull();
+        result!.ResolvedContent.Should().Contain("\n");
     }
 }

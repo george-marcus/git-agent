@@ -261,6 +261,85 @@ Use 'git-agent config use <provider>' to switch providers.
 
 ---
 
+### `conflicts`
+
+Analyze and resolve merge conflicts with AI assistance.
+
+```bash
+git-agent conflicts [options] [file]
+```
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--suggest` | `-s` | Show AI-suggested resolutions |
+| `--resolve` | `-r` | Interactively resolve conflicts |
+
+**Examples:**
+```bash
+# Analyze all conflicts
+git-agent conflicts
+
+# Get AI suggestions for resolution
+git-agent conflicts -s
+
+# Interactively resolve conflicts
+git-agent conflicts -r
+
+# Analyze specific file
+git-agent conflicts src/app.ts
+```
+
+---
+
+### `completions`
+
+Generate shell completion scripts.
+
+```bash
+git-agent completions <shell>
+```
+
+**Supported shells:** `bash`, `zsh`, `powershell`, `fish`
+
+**Installation:**
+
+```bash
+# Bash
+git-agent completions bash >> ~/.bashrc
+
+# Zsh
+git-agent completions zsh >> ~/.zshrc
+
+# PowerShell
+git-agent completions powershell >> $PROFILE
+
+# Fish
+git-agent completions fish > ~/.config/fish/completions/git-agent.fish
+```
+
+---
+
+### `serve`
+
+Start JSON-RPC server for IDE integration.
+
+```bash
+git-agent serve [options]
+```
+
+**Options:**
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--port` | `-p` | Port to listen on (default: 9123) |
+
+**Example:**
+```bash
+git-agent serve --port 9123
+```
+
+---
+
 ### `cache`
 
 Manage HTTP response cache.
@@ -279,6 +358,177 @@ Show cache directory path.
 
 ```bash
 git-agent cache path
+```
+
+---
+
+## IDE Integration
+
+### VS Code Extension
+
+A full-featured VS Code extension is included in the `vscode-extension/` directory.
+
+#### Installation
+
+1. **Build the extension:**
+   ```bash
+   cd vscode-extension
+   npm install
+   npm run compile
+   npx vsce package
+   ```
+
+2. **Install in VS Code:**
+   - Press `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+   - Select the generated `.vsix` file
+
+#### Usage
+
+| Command | Keyboard Shortcut | Description |
+|---------|-------------------|-------------|
+| Git Agent: Run Instruction | `Ctrl+Shift+G Ctrl+Shift+R` | Enter natural language instruction |
+| Git Agent: Run & Execute | `Ctrl+Shift+G Ctrl+Shift+E` | Run and execute immediately |
+| Git Agent: Analyze Conflicts | - | Analyze merge conflicts |
+| Git Agent: Set Provider | - | Switch AI provider |
+
+#### Settings
+
+Configure in VS Code settings (`Ctrl+,`):
+
+```json
+{
+  "git-agent.provider": "claude",
+  "git-agent.executablePath": "git-agent",
+  "git-agent.showOutputPanel": true,
+  "git-agent.confirmBeforeExecute": true
+}
+```
+
+See [vscode-extension/README.md](vscode-extension/README.md) for full documentation.
+
+---
+
+### Visual Studio (Windows)
+
+Git-agent can be integrated with Visual Studio using External Tools:
+
+#### Setup External Tool
+
+1. Open Visual Studio
+2. Go to **Tools** → **External Tools...**
+3. Click **Add** and configure:
+
+| Field | Value |
+|-------|-------|
+| Title | `Git Agent: Run` |
+| Command | `cmd.exe` |
+| Arguments | `/c git-agent run "$(PromptVariable)" & pause` |
+| Initial directory | `$(SolutionDir)` |
+
+4. Add another for quick execution:
+
+| Field | Value |
+|-------|-------|
+| Title | `Git Agent: Run & Execute` |
+| Command | `cmd.exe` |
+| Arguments | `/c git-agent run "$(PromptVariable)" --exec & pause` |
+| Initial directory | `$(SolutionDir)` |
+
+#### Assign Keyboard Shortcuts
+
+1. Go to **Tools** → **Options** → **Environment** → **Keyboard**
+2. Search for `Tools.ExternalCommand1` (or the number of your git-agent tool)
+3. Assign a shortcut like `Ctrl+Shift+G, Ctrl+Shift+R`
+
+#### Using Terminal
+
+Alternatively, use the integrated terminal:
+- Open **View** → **Terminal** (`Ctrl+``)
+- Run git-agent commands directly
+
+---
+
+### JetBrains IDEs (IntelliJ, Rider, WebStorm, etc.)
+
+#### External Tools Setup
+
+1. Go to **File** → **Settings** → **Tools** → **External Tools**
+2. Click **+** to add a new tool:
+
+| Field | Value |
+|-------|-------|
+| Name | `Git Agent Run` |
+| Program | `git-agent` |
+| Arguments | `run "$Prompt$"` |
+| Working directory | `$ProjectFileDir$` |
+
+3. Add another for execution:
+
+| Field | Value |
+|-------|-------|
+| Name | `Git Agent Execute` |
+| Program | `git-agent` |
+| Arguments | `run "$Prompt$" --exec` |
+| Working directory | `$ProjectFileDir$` |
+
+#### Assign Keyboard Shortcuts
+
+1. Go to **File** → **Settings** → **Keymap**
+2. Search for "External Tools"
+3. Right-click on your git-agent tool → **Add Keyboard Shortcut**
+4. Assign `Ctrl+Shift+G` or your preferred shortcut
+
+#### Using Terminal
+
+- Open **View** → **Tool Windows** → **Terminal**
+- Run git-agent commands directly
+
+---
+
+### JSON-RPC Server Integration
+
+For custom IDE integrations, git-agent provides a JSON-RPC server:
+
+```bash
+git-agent serve --port 9123
+```
+
+#### Protocol
+
+Send JSON-RPC 2.0 requests over TCP:
+
+```json
+{"jsonrpc": "2.0", "method": "git-agent/run", "params": {"instruction": "commit all changes"}, "id": 1}
+```
+
+#### Available Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `git-agent/run` | `instruction`, `provider?` | Generate git commands |
+| `git-agent/conflicts` | - | Get conflict analysis |
+| `git-agent/suggest` | - | Get resolution suggestions |
+| `git-agent/status` | - | Get repository status |
+| `git-agent/providers` | - | List available providers |
+
+#### Example Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "commands": [
+      {"commandText": "git add .", "risk": "safe"},
+      {"commandText": "git commit -m \"Update files\"", "risk": "safe"}
+    ],
+    "context": {
+      "branch": "main",
+      "hasUncommittedChanges": true,
+      "mergeState": "None"
+    }
+  },
+  "id": 1
+}
 ```
 
 ---
@@ -411,7 +661,7 @@ Cache status is displayed when available:
 ```
 ├── Program.cs                      # CLI entry point with DI setup
 ├── Commands/
-│   └── CommandBuilderExtensions.cs # CLI command definitions (run, config, providers, cache)
+│   └── CommandBuilderExtensions.cs # CLI command definitions
 ├── Configuration/
 │   ├── ConfigManager.cs            # Configuration loading/saving
 │   ├── GitAgentConfig.cs           # Root config model
@@ -422,7 +672,7 @@ Cache status is displayed when available:
 ├── Models/
 │   ├── GeneratedCommand.cs         # Generated command with risk level
 │   ├── GitTools.cs                 # Tool schema for LLM function calling
-│   └── RepoContext.cs              # Git repository context
+│   └── RepoContext.cs              # Git repository context + merge state
 ├── Providers/
 │   ├── IModelProvider.cs           # Provider interface
 │   ├── ProviderFactory.cs          # Provider factory with DI
@@ -433,10 +683,17 @@ Cache status is displayed when available:
 ├── Services/
 │   ├── CachingHttpHandler.cs       # HTTP response caching
 │   ├── CommandExecutor.cs          # Git command execution
+│   ├── CompletionGenerator.cs      # Shell completion scripts
+│   ├── ConflictResolver.cs         # Merge conflict analysis & resolution
 │   ├── GitInspector.cs             # Git repository inspection
+│   ├── JsonRpcServer.cs            # JSON-RPC server for IDEs
 │   ├── PromptBuilder.cs            # LLM prompt construction
 │   ├── ResponseParser.cs           # Text response parsing (Ollama fallback)
 │   └── SafetyValidator.cs          # Command risk validation
+├── vscode-extension/               # VS Code extension
+│   ├── src/extension.ts            # Extension entry point
+│   ├── package.json                # Extension manifest
+│   └── README.md                   # Extension documentation
 ├── scripts/                        # Installation scripts
 └── tests/                          # xUnit test suite
 ```

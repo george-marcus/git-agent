@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using GitAgent.Configuration;
 using GitAgent.Models;
@@ -27,6 +26,7 @@ internal partial class CacheJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(ClaudeRequest))]
 [JsonSerializable(typeof(ClaudeResponse))]
 [JsonSerializable(typeof(GitToolInput))]
+[JsonSerializable(typeof(ConflictToolInput))]
 internal partial class ClaudeJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(
@@ -35,6 +35,7 @@ internal partial class ClaudeJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(OpenAIRequest))]
 [JsonSerializable(typeof(OpenAIResponse))]
 [JsonSerializable(typeof(GitToolInput))]
+[JsonSerializable(typeof(ConflictToolInput))]
 internal partial class OpenAIJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(
@@ -42,3 +43,13 @@ internal partial class OpenAIJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(OllamaRequest))]
 [JsonSerializable(typeof(OllamaResponse))]
 internal partial class OllamaJsonContext : JsonSerializerContext;
+
+[JsonSerializable(typeof(JsonRpcRequest))]
+[JsonSerializable(typeof(JsonRpcResponse))]
+[JsonSerializable(typeof(JsonRpcErrorResponse))]
+[JsonSerializable(typeof(RunResult))]
+[JsonSerializable(typeof(ConflictsResult))]
+[JsonSerializable(typeof(SuggestResult))]
+[JsonSerializable(typeof(StatusResult))]
+[JsonSerializable(typeof(ProvidersResult))]
+internal partial class JsonRpcJsonContext : JsonSerializerContext;
