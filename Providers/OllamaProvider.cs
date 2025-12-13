@@ -29,14 +29,14 @@ public class OllamaProvider : IModelProvider
     {
         var prompt = _promptBuilder.BuildPrompt(instruction, context);
 
-        var requestBody = new
+        var requestBody = new OllamaRequest
         {
-            model = _config.Model,
-            prompt = prompt,
-            stream = false
+            Model = _config.Model,
+            Prompt = prompt,
+            Stream = false
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
+        var json = JsonSerializer.Serialize(requestBody, OllamaJsonContext.Default.OllamaRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         try
@@ -55,7 +55,7 @@ public class OllamaProvider : IModelProvider
                 throw new HttpRequestException($"Ollama API error ({response.StatusCode}): {responseJson}");
             }
 
-            var result = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
+            var result = JsonSerializer.Deserialize(responseJson, OllamaJsonContext.Default.OllamaResponse);
             var textContent = result?.Response ?? "";
 
             return _responseParser.ParseResponse(textContent);
@@ -69,6 +69,13 @@ public class OllamaProvider : IModelProvider
             throw new TimeoutException("Ollama request timed out after 120 seconds.");
         }
     }
+}
+
+internal class OllamaRequest
+{
+    public string Model { get; set; } = "";
+    public string Prompt { get; set; } = "";
+    public bool Stream { get; set; }
 }
 
 internal class OllamaResponse

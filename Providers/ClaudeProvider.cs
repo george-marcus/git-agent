@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using GitAgent.Configuration;
 using GitAgent.Models;
 using GitAgent.Services;
@@ -12,12 +11,6 @@ public class ClaudeProvider : IModelProvider
     private readonly ClaudeConfig _config;
     private readonly IPromptBuilder _promptBuilder;
     private readonly HttpClient _httpClient;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 
     private const string SystemPrompt = """
         You are a git command generator. Your task is to translate natural language instructions into git commands.
@@ -85,7 +78,7 @@ public class ClaudeProvider : IModelProvider
             }
         };
 
-        var json = JsonSerializer.Serialize(requestBody, JsonOptions);
+        var json = JsonSerializer.Serialize(requestBody, ClaudeJsonContext.Default.ClaudeRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         _httpClient.DefaultRequestHeaders.Clear();
@@ -103,7 +96,7 @@ public class ClaudeProvider : IModelProvider
                 throw new HttpRequestException($"Claude API error ({response.StatusCode}): {responseJson}");
             }
 
-            var result = JsonSerializer.Deserialize<ClaudeResponse>(responseJson, JsonOptions);
+            var result = JsonSerializer.Deserialize(responseJson, ClaudeJsonContext.Default.ClaudeResponse);
 
             if (result?.Usage != null)
             {
@@ -120,8 +113,8 @@ public class ClaudeProvider : IModelProvider
             var toolUse = result?.Content?.FirstOrDefault(c => c.Type == "tool_use");
             if (toolUse?.Input != null)
             {
-                var inputJson = JsonSerializer.Serialize(toolUse.Input, JsonOptions);
-                var toolInput = JsonSerializer.Deserialize<GitToolInput>(inputJson, JsonOptions);
+                var inputJson = toolUse.Input.Value.GetRawText();
+                var toolInput = JsonSerializer.Deserialize(inputJson, ClaudeJsonContext.Default.GitToolInput);
 
                 if (toolInput?.Commands != null)
                 {
@@ -201,7 +194,7 @@ internal class ClaudeContentBlock
     public string? Text { get; set; }
     public string? Id { get; set; }
     public string? Name { get; set; }
-    public object? Input { get; set; }
+    public JsonElement? Input { get; set; }
 }
 
 internal class ClaudeUsage

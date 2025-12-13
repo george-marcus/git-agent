@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using GitAgent.Configuration;
 using GitAgent.Models;
 using GitAgent.Services;
@@ -13,12 +12,6 @@ public class OpenAIProvider : IModelProvider
     private readonly OpenAIConfig _config;
     private readonly IPromptBuilder _promptBuilder;
     private readonly HttpClient _httpClient;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 
     private const string SystemPrompt = """
         You are a git command generator. Your task is to translate natural language instructions into git commands.
@@ -81,7 +74,7 @@ public class OpenAIProvider : IModelProvider
             }
         };
 
-        var json = JsonSerializer.Serialize(requestBody, JsonOptions);
+        var json = JsonSerializer.Serialize(requestBody, OpenAIJsonContext.Default.OpenAIRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         _httpClient.DefaultRequestHeaders.Clear();
@@ -98,7 +91,7 @@ public class OpenAIProvider : IModelProvider
                 throw new HttpRequestException($"OpenAI API error ({response.StatusCode}): {responseJson}");
             }
 
-            var result = JsonSerializer.Deserialize<OpenAIResponse>(responseJson, JsonOptions);
+            var result = JsonSerializer.Deserialize(responseJson, OpenAIJsonContext.Default.OpenAIResponse);
 
             if (result?.Usage != null)
             {
@@ -112,7 +105,7 @@ public class OpenAIProvider : IModelProvider
             var toolCall = result?.Choices?.FirstOrDefault()?.Message?.ToolCalls?.FirstOrDefault();
             if (toolCall?.Function?.Arguments != null)
             {
-                var toolInput = JsonSerializer.Deserialize<GitToolInput>(toolCall.Function.Arguments, JsonOptions);
+                var toolInput = JsonSerializer.Deserialize(toolCall.Function.Arguments, OpenAIJsonContext.Default.GitToolInput);
 
                 if (toolInput?.Commands != null)
                 {

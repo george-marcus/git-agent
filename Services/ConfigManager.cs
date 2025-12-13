@@ -12,12 +12,6 @@ public interface IConfigManager
 
 public class ConfigManager : IConfigManager
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public string ConfigPath { get; }
 
     public ConfigManager()
@@ -44,7 +38,7 @@ public class ConfigManager : IConfigManager
         try
         {
             var json = await File.ReadAllTextAsync(ConfigPath);
-            return JsonSerializer.Deserialize<GitAgentConfig>(json, JsonOptions) ?? new GitAgentConfig();
+            return JsonSerializer.Deserialize(json, ConfigJsonContext.Default.GitAgentConfig) ?? new GitAgentConfig();
         }
         catch (Exception ex)
         {
@@ -58,7 +52,7 @@ public class ConfigManager : IConfigManager
     {
         try
         {
-            var json = JsonSerializer.Serialize(config, JsonOptions);
+            var json = JsonSerializer.Serialize(config, ConfigJsonContext.Default.GitAgentConfig);
             await File.WriteAllTextAsync(ConfigPath, json);
         }
         catch (Exception ex)

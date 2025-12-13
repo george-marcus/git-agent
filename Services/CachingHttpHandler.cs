@@ -80,7 +80,7 @@ public class CachingHttpHandler : DelegatingHandler
             }
 
             var json = await File.ReadAllTextAsync(cacheFile);
-            var cached = JsonSerializer.Deserialize<CachedHttpResponse>(json);
+            var cached = JsonSerializer.Deserialize(json, CacheJsonContext.Default.CachedHttpResponse);
 
             if (cached == null)
             {
@@ -117,7 +117,7 @@ public class CachingHttpHandler : DelegatingHandler
                 CachedAt = DateTime.UtcNow
             };
 
-            var json = JsonSerializer.Serialize(cached, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(cached, CacheJsonContext.Default.CachedHttpResponse);
             await File.WriteAllTextAsync(cacheFile, json);
 
             response.Content = new StringContent(content, Encoding.UTF8, contentType ?? "application/json");
