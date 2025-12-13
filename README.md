@@ -309,6 +309,80 @@ Configuration is stored in `~/.git-agent/config.json`:
 }
 ```
 
+## Using Ollama for Local LLM
+
+[Ollama](https://ollama.ai) allows you to run LLMs locally without any API keys or cloud dependencies.
+
+### 1. Install Ollama
+
+**Windows:**
+Download and run the installer from [ollama.ai/download](https://ollama.ai/download)
+
+**Linux:**
+```bash
+curl -fsSL https://ollama.ai/install.sh | sh
+```
+
+**macOS:**
+```bash
+brew install ollama
+```
+
+### 2. Pull a Model
+
+```bash
+ollama pull llama3.2
+```
+
+Other recommended models for git commands:
+- `llama3.2` (default, 3B parameters, fast)
+- `llama3.1` (8B parameters, better quality)
+- `codellama` (optimized for code tasks)
+- `mistral` (7B parameters, good balance)
+
+### 3. Start Ollama Server
+
+Ollama runs as a background service. On most systems it starts automatically after installation. If not:
+
+```bash
+ollama serve
+```
+
+The server runs on `http://localhost:11434` by default.
+
+### 4. Configure git-agent
+
+```bash
+git-agent config use ollama
+git-agent config set ollama.model llama3.2
+```
+
+**Optional:** If Ollama runs on a different host or port:
+```bash
+git-agent config set ollama.baseUrl http://192.168.1.100:11434
+```
+
+### 5. Use git-agent
+
+```bash
+git-agent run "show me the last 5 commits"
+git-agent run "commit all changes with a good message" -x
+```
+
+### Troubleshooting
+
+**"Connection refused" error:**
+- Ensure Ollama is running: `ollama serve`
+- Check the URL: `curl http://localhost:11434/api/tags`
+
+**Slow responses:**
+- Use a smaller model like `llama3.2` (3B) instead of larger ones
+- Ensure you have enough RAM (8GB+ recommended for 7B models)
+
+**Poor quality responses:**
+- Try a larger model: `ollama pull llama3.1`
+- Some models work better for code tasks: `ollama pull codellama`
+
 ## Safety Features
 
 Commands are validated against an allowlist and categorized by risk level:
