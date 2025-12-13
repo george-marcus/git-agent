@@ -7,6 +7,10 @@ const execAsync = promisify(exec);
 let outputChannel: vscode.OutputChannel;
 let cachedExecutablePath: string | null = null;
 
+function stripAnsi(text: string): string {
+    return text.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
 export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Git Agent');
 
@@ -112,17 +116,17 @@ async function runInstruction() {
     try {
         const provider = config.get('provider', 'claude');
         const result = await runGitAgent(`run "${instruction}" --provider ${provider}`, cwd);
+        const stdout = stripAnsi(result.stdout);
+        const stderr = stripAnsi(result.stderr);
 
-        outputChannel.appendLine(result.stdout);
-        if (result.stderr) {
-            outputChannel.appendLine(`[stderr] ${result.stderr}`);
+        outputChannel.appendLine(stdout);
+        if (stderr) {
+            outputChannel.appendLine(`[stderr] ${stderr}`);
         }
 
-        // Parse the generated commands
-        const commands = parseGeneratedCommands(result.stdout);
+        const commands = parseGeneratedCommands(stdout);
 
         if (commands.length > 0) {
-            // Show quick pick to optionally execute
             const choice = await vscode.window.showQuickPick(
                 [
                     { label: '$(play) Execute All', description: 'Run all generated commands', value: 'execute' },
@@ -165,9 +169,10 @@ async function runAndExecuteInstruction() {
         const provider = config.get('provider', 'claude');
 
         const previewResult = await runGitAgent(`run "${instruction}" --provider ${provider}`, cwd);
-        outputChannel.appendLine(previewResult.stdout);
+        const previewStdout = stripAnsi(previewResult.stdout);
+        outputChannel.appendLine(previewStdout);
 
-        const commands = parseGeneratedCommands(previewResult.stdout);
+        const commands = parseGeneratedCommands(previewStdout);
 
         if (commands.length > 0) {
             if (confirmBeforeExecute) {
@@ -181,9 +186,11 @@ async function runAndExecuteInstruction() {
 
             outputChannel.appendLine('\n--- Executing via git-agent ---');
             const execResult = await runGitAgent(`run "${instruction}" --provider ${provider} -x`, cwd);
-            outputChannel.appendLine(execResult.stdout);
-            if (execResult.stderr) {
-                outputChannel.appendLine(`[stderr] ${execResult.stderr}`);
+            const execStdout = stripAnsi(execResult.stdout);
+            const execStderr = stripAnsi(execResult.stderr);
+            outputChannel.appendLine(execStdout);
+            if (execStderr) {
+                outputChannel.appendLine(`[stderr] ${execStderr}`);
             }
             vscode.window.showInformationMessage('Git Agent: Commands executed');
         }
@@ -202,9 +209,10 @@ async function analyzeConflicts() {
 
     try {
         const result = await runGitAgent('conflicts', cwd);
-        outputChannel.appendLine(result.stdout);
+        const stdout = stripAnsi(result.stdout);
+        outputChannel.appendLine(stdout);
 
-        if (result.stdout.includes('No merge in progress')) {
+        if (stdout.includes('No merge in progress')) {
             vscode.window.showInformationMessage('No merge conflicts detected.');
         } else {
             vscode.window.showInformationMessage('Conflict analysis complete. See output panel for details.');
@@ -224,7 +232,7 @@ async function suggestResolutions() {
 
     try {
         const result = await runGitAgent('conflicts --suggest', cwd);
-        outputChannel.appendLine(result.stdout);
+        outputChannel.appendLine(stripAnsi(result.stdout));
         vscode.window.showInformationMessage('Resolution suggestions generated. See output panel.');
     } catch (error: any) {
         outputChannel.appendLine(`Error: ${error.message}`);
@@ -261,7 +269,6 @@ async function showStatus() {
         const provider = config.get('provider', 'claude');
         const result = await runGitAgent(`run "show status" --provider ${provider}`, cwd);
 
-        // Also get actual git status
         const gitResult = await execAsync('git status --short', { cwd });
 
         const panel = vscode.window.createWebviewPanel(
@@ -303,8 +310,9 @@ function parseGeneratedCommands(output: string): string[] {
             continue;
         }
 
-        if (inCommandSection && line.trim().startsWith('git ')) {
-            const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '').trim();
+        const cleanLine = line.trim();
+
+        if (inCommandSection && cleanLine.startsWith('git ')) {
             commands.push(cleanLine);
         }
     }
