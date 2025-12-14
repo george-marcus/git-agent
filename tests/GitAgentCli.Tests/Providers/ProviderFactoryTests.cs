@@ -30,6 +30,7 @@ public class ProviderFactoryTests
     {
         _factory.AvailableProviders.Should().Contain("claude");
         _factory.AvailableProviders.Should().Contain("openai");
+        _factory.AvailableProviders.Should().Contain("openrouter");
         _factory.AvailableProviders.Should().Contain("ollama");
         _factory.AvailableProviders.Should().Contain("stub");
     }
@@ -47,6 +48,7 @@ public class ProviderFactoryTests
     [Theory]
     [InlineData("claude", typeof(ClaudeProvider))]
     [InlineData("openai", typeof(OpenAIProvider))]
+    [InlineData("openrouter", typeof(OpenRouterProvider))]
     [InlineData("ollama", typeof(OllamaProvider))]
     [InlineData("stub", typeof(StubProvider))]
     public async Task CreateProviderAsync_WithValidName_ReturnsCorrectType(string name, Type expectedType)
@@ -60,6 +62,8 @@ public class ProviderFactoryTests
     [InlineData("Claude")]
     [InlineData("OPENAI")]
     [InlineData("OpenAI")]
+    [InlineData("OPENROUTER")]
+    [InlineData("OpenRouter")]
     [InlineData("OLLAMA")]
     [InlineData("Ollama")]
     [InlineData("STUB")]
@@ -89,6 +93,7 @@ public class ProviderFactoryTests
         var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Contain("claude");
         exception.Which.Message.Should().Contain("openai");
+        exception.Which.Message.Should().Contain("openrouter");
         exception.Which.Message.Should().Contain("ollama");
         exception.Which.Message.Should().Contain("stub");
     }
@@ -134,5 +139,36 @@ public class ProviderFactoryTests
     {
         var provider = await _factory.CreateProviderAsync("openai");
         provider.Should().BeOfType<OpenAIProvider>();
+    }
+
+    [Fact]
+    public async Task CreateProviderAsync_WithOpenRouter_UsesStandardPromptBuilder()
+    {
+        var provider = await _factory.CreateProviderAsync("openrouter");
+        provider.Should().BeOfType<OpenRouterProvider>();
+    }
+
+    [Fact]
+    public async Task CreateProviderAsync_WithOpenRouterConfig_UsesConfigValues()
+    {
+        var config = new GitAgentConfig
+        {
+            Providers = new ProviderConfigs
+            {
+                OpenRouter = new OpenRouterConfig
+                {
+                    ApiKey = "test-openrouter-key",
+                    Model = "anthropic/claude-3-opus",
+                    BaseUrl = "https://custom-openrouter.example.com",
+                    SiteName = "CustomApp",
+                    SiteUrl = "https://custom.example.com"
+                }
+            }
+        };
+        _configManager.LoadAsync().Returns(config);
+
+        var provider = await _factory.CreateProviderAsync("openrouter");
+
+        provider.Should().BeOfType<OpenRouterProvider>();
     }
 }

@@ -1,6 +1,6 @@
 # git-agent
 
-A .NET CLI tool that translates natural language instructions into git commands using AI providers (Claude, OpenAI, Ollama).
+A .NET CLI tool that translates natural language instructions into git commands using AI providers (Claude, OpenAI, OpenRouter, Ollama).
 
 ## Installation
 
@@ -181,13 +181,18 @@ git-agent config set <key> <value>
 **Available keys:**
 | Key | Description |
 |-----|-------------|
-| `activeProvider` | Active provider (claude, openai, ollama, stub) |
+| `activeProvider` | Active provider (claude, openai, openrouter, ollama, stub) |
 | `claude.apiKey` | Claude API key |
 | `claude.model` | Claude model name (default: claude-sonnet-4-20250514) |
 | `claude.baseUrl` | Claude API base URL |
 | `openai.apiKey` | OpenAI API key |
 | `openai.model` | OpenAI model name (default: gpt-4o) |
 | `openai.baseUrl` | OpenAI API base URL |
+| `openrouter.apiKey` | OpenRouter API key |
+| `openrouter.model` | OpenRouter model name (default: openai/gpt-4o) |
+| `openrouter.baseUrl` | OpenRouter API base URL |
+| `openrouter.siteName` | App name for OpenRouter attribution (default: GitAgent) |
+| `openrouter.siteUrl` | Site URL for OpenRouter attribution |
 | `ollama.model` | Ollama model name (default: llama3.2) |
 | `ollama.baseUrl` | Ollama API base URL (default: http://localhost:11434) |
 
@@ -195,6 +200,8 @@ git-agent config set <key> <value>
 ```bash
 git-agent config set claude.apiKey sk-ant-xxxxx
 git-agent config set openai.model gpt-4-turbo
+git-agent config set openrouter.apiKey sk-or-xxxxx
+git-agent config set openrouter.model anthropic/claude-3-opus
 git-agent config set ollama.baseUrl http://192.168.1.100:11434
 ```
 
@@ -214,11 +221,12 @@ Set the active provider.
 git-agent config use <provider>
 ```
 
-**Available providers:** `claude`, `openai`, `ollama`, `stub`
+**Available providers:** `claude`, `openai`, `openrouter`, `ollama`, `stub`
 
 ```bash
 git-agent config use claude
 git-agent config use openai
+git-agent config use openrouter
 git-agent config use ollama
 ```
 
@@ -253,6 +261,7 @@ git-agent providers
 Available providers:
   - claude (active)
   - openai
+  - openrouter
   - ollama
   - stub
 
@@ -551,6 +560,13 @@ Configuration is stored in `~/.git-agent/config.json`:
       "model": "gpt-4o",
       "baseUrl": "https://api.openai.com"
     },
+    "openrouter": {
+      "apiKey": "sk-or-...",
+      "model": "openai/gpt-4o",
+      "baseUrl": "https://openrouter.ai",
+      "siteName": "GitAgent",
+      "siteUrl": ""
+    },
     "ollama": {
       "model": "llama3.2",
       "baseUrl": "http://localhost:11434"
@@ -558,6 +574,73 @@ Configuration is stored in `~/.git-agent/config.json`:
   }
 }
 ```
+
+## Using OpenRouter
+
+[OpenRouter](https://openrouter.ai) is a unified API that provides access to 500+ AI models from multiple providers (OpenAI, Anthropic, Google, Meta, Mistral, and more) with a single API key.
+
+### Benefits
+
+- **Access to many models**: Use GPT-4, Claude, Gemini, Llama, Mistral, and hundreds more with one API key
+- **Cost optimization**: OpenRouter automatically routes to the cheapest provider for each model
+- **Fallback support**: Automatic failover if a provider is unavailable
+- **OpenAI-compatible**: Uses the standard OpenAI API format
+
+### Setup
+
+1. **Get an API key** from [openrouter.ai/keys](https://openrouter.ai/keys)
+
+2. **Configure git-agent:**
+   ```bash
+   git-agent config set openrouter.apiKey sk-or-xxxxx
+   git-agent config use openrouter
+   ```
+
+3. **Choose a model** (optional, default is `openai/gpt-4o`):
+   ```bash
+   # Use Claude via OpenRouter
+   git-agent config set openrouter.model anthropic/claude-3-opus
+
+   # Use GPT-4 Turbo
+   git-agent config set openrouter.model openai/gpt-4-turbo
+
+   # Use Mistral Large
+   git-agent config set openrouter.model mistralai/mistral-large
+
+   # Use Llama 3.1 405B
+   git-agent config set openrouter.model meta-llama/llama-3.1-405b-instruct
+   ```
+
+4. **Use git-agent:**
+   ```bash
+   git-agent run "show me the last 5 commits"
+   git-agent run "commit all changes" -x
+   ```
+
+### Popular Models
+
+| Model | ID |
+|-------|-----|
+| GPT-4o | `openai/gpt-4o` |
+| GPT-4 Turbo | `openai/gpt-4-turbo` |
+| Claude 3 Opus | `anthropic/claude-3-opus` |
+| Claude 3.5 Sonnet | `anthropic/claude-3.5-sonnet` |
+| Gemini Pro 1.5 | `google/gemini-pro-1.5` |
+| Mistral Large | `mistralai/mistral-large` |
+| Llama 3.1 405B | `meta-llama/llama-3.1-405b-instruct` |
+
+See the full model list at [openrouter.ai/models](https://openrouter.ai/models).
+
+### App Attribution (Optional)
+
+OpenRouter supports app attribution headers for leaderboard rankings:
+
+```bash
+git-agent config set openrouter.siteName "MyApp"
+git-agent config set openrouter.siteUrl "https://myapp.example.com"
+```
+
+---
 
 ## Using Ollama for Local LLM
 
@@ -668,6 +751,7 @@ Cache status is displayed when available:
 │   ├── ProviderConfigs.cs          # Provider config container
 │   ├── ClaudeConfig.cs             # Claude provider settings
 │   ├── OpenAIConfig.cs             # OpenAI provider settings
+│   ├── OpenRouterConfig.cs         # OpenRouter provider settings
 │   └── OllamaConfig.cs             # Ollama provider settings
 ├── Models/
 │   ├── GeneratedCommand.cs         # Generated command with risk level
@@ -678,6 +762,7 @@ Cache status is displayed when available:
 │   ├── ProviderFactory.cs          # Provider factory with DI
 │   ├── ClaudeProvider.cs           # Anthropic Claude implementation
 │   ├── OpenAIProvider.cs           # OpenAI implementation
+│   ├── OpenRouterProvider.cs       # OpenRouter multi-model implementation
 │   ├── OllamaProvider.cs           # Ollama local LLM implementation
 │   └── StubProvider.cs             # Testing stub provider
 ├── Services/

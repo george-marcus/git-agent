@@ -22,6 +22,7 @@ public class ProviderFactory : IProviderFactory
     [
         "claude",
         "openai",
+        "openrouter",
         "ollama",
         "stub"
     ];
@@ -48,6 +49,7 @@ public class ProviderFactory : IProviderFactory
         {
             "claude" => new ClaudeProvider(config.Providers.Claude, _promptBuilder, HttpCacheHandler),
             "openai" => new OpenAIProvider(config.Providers.OpenAI, _promptBuilder, HttpCacheHandler),
+            "openrouter" => new OpenRouterProvider(config.Providers.OpenRouter, _promptBuilder, HttpCacheHandler),
             "ollama" => new OllamaProvider(config.Providers.Ollama, new OllamaPromptBuilder(), _responseParser),
             "stub" => new StubProvider(),
             _ => throw new ArgumentException($"Unknown provider: '{providerName}'. Available: {string.Join(", ", AvailableProviders)}")

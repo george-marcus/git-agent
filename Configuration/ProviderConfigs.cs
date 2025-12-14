@@ -12,4 +12,7 @@ public class ProviderConfigs
 
     [JsonPropertyName("ollama")]
     public OllamaConfig Ollama { get; set; } = new();
+
+    [JsonPropertyName("openrouter")]
+    public OpenRouterConfig OpenRouter { get; set; } = new();
 }
