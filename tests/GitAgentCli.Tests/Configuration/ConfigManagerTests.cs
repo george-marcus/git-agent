@@ -152,10 +152,91 @@ public class ConfigManagerTests : IDisposable
         json.Should().Contain("\n");
         json.Should().Contain("  ");
     }
+
+    [Fact]
+    public async Task LoadAsync_WithOldConfigVersion_MigratesAndSaves()
+    {
+        var oldConfig = """
+            {
+              "activeProvider": "claude",
+              "providers": {
+                "claude": {
+                  "apiKey": "test-key",
+                  "model": "claude-3-opus",
+                  "baseUrl": "https://api.anthropic.com"
+                },
+                "openai": {
+                  "apiKey": "",
+                  "model": "gpt-4o",
+                  "baseUrl": "https://api.openai.com"
+                },
+                "ollama": {
+                  "model": "llama3.2",
+                  "baseUrl": "http://localhost:11434"
+                }
+              }
+            }
+            """;
+        await File.WriteAllTextAsync(_testConfigPath, oldConfig);
+        var manager = CreateManager();
+
+        var config = await manager.LoadAsync();
+
+        config.ActiveProvider.Should().Be("claude");
+        config.Providers.Claude.ApiKey.Should().Be("test-key");
+
+        config.Providers.OpenRouter.Should().NotBeNull();
+        config.Providers.OpenRouter.Model.Should().Be("openai/gpt-4o");
+        config.Providers.OpenRouter.BaseUrl.Should().Be("https://openrouter.ai");
+
+        config.ConfigVersion.Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task LoadAsync_PreservesExistingProviderSettings_DuringMigration()
+    {
+        var oldConfig = """
+            {
+              "activeProvider": "openai",
+              "providers": {
+                "claude": {
+                  "apiKey": "my-claude-key",
+                  "model": "claude-3-5-sonnet",
+                  "baseUrl": "https://custom-claude.com"
+                },
+                "openai": {
+                  "apiKey": "my-openai-key",
+                  "model": "gpt-4-turbo",
+                  "baseUrl": "https://custom-openai.com"
+                },
+                "ollama": {
+                  "model": "mistral",
+                  "baseUrl": "http://192.168.1.100:11434"
+                }
+              }
+            }
+            """;
+        await File.WriteAllTextAsync(_testConfigPath, oldConfig);
+        var manager = CreateManager();
+
+        var config = await manager.LoadAsync();
+
+        config.ActiveProvider.Should().Be("openai");
+        config.Providers.Claude.ApiKey.Should().Be("my-claude-key");
+        config.Providers.Claude.Model.Should().Be("claude-3-5-sonnet");
+        config.Providers.Claude.BaseUrl.Should().Be("https://custom-claude.com");
+        config.Providers.OpenAI.ApiKey.Should().Be("my-openai-key");
+        config.Providers.OpenAI.Model.Should().Be("gpt-4-turbo");
+        config.Providers.OpenAI.BaseUrl.Should().Be("https://custom-openai.com");
+        config.Providers.Ollama.Model.Should().Be("mistral");
+        config.Providers.Ollama.BaseUrl.Should().Be("http://192.168.1.100:11434");
+    }
 }
 
 internal class TestableConfigManager : IConfigManager
 {
+    private const int CurrentConfigVersion = 2;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -178,7 +259,7 @@ internal class TestableConfigManager : IConfigManager
     {
         if (!File.Exists(ConfigPath))
         {
-            var defaultConfig = new GitAgentConfig();
+            var defaultConfig = new GitAgentConfig { ConfigVersion = CurrentConfigVersion };
             await SaveAsync(defaultConfig);
             return defaultConfig;
         }
@@ -186,11 +267,19 @@ internal class TestableConfigManager : IConfigManager
         try
         {
             var json = await File.ReadAllTextAsync(ConfigPath);
-            return JsonSerializer.Deserialize<GitAgentConfig>(json, JsonOptions) ?? new GitAgentConfig();
+            var config = JsonSerializer.Deserialize<GitAgentConfig>(json, JsonOptions) ?? new GitAgentConfig();
+
+            if (config.ConfigVersion < CurrentConfigVersion)
+            {
+                config.ConfigVersion = CurrentConfigVersion;
+                await SaveAsync(config);
+            }
+
+            return config;
         }
         catch
         {
-            return new GitAgentConfig();
+            return new GitAgentConfig { ConfigVersion = CurrentConfigVersion };
         }
     }
 

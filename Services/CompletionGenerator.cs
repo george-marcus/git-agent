@@ -65,15 +65,15 @@ public class CompletionGenerator : ICompletionGenerator
                         return 0
                         ;;
                     use|--provider|-p)
-                        COMPREPLY=( $(compgen -W "claude openai ollama stub" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "claude openai openrouter ollama stub" -- ${cur}) )
                         return 0
                         ;;
                     set)
-                        COMPREPLY=( $(compgen -W "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl ollama.model ollama.baseUrl" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl openrouter.apiKey openrouter.model openrouter.baseUrl openrouter.siteName openrouter.siteUrl ollama.model ollama.baseUrl" -- ${cur}) )
                         return 0
                         ;;
                     get)
-                        COMPREPLY=( $(compgen -W "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl ollama.model ollama.baseUrl" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl openrouter.apiKey openrouter.model openrouter.baseUrl openrouter.siteName openrouter.siteUrl ollama.model ollama.baseUrl" -- ${cur}) )
                         return 0
                         ;;
                     *)
@@ -122,7 +122,7 @@ public class CompletionGenerator : ICompletionGenerator
                     'clear:Clear all cached HTTP responses'
                     'path:Show cache directory path'
                 )
-                providers=(claude openai ollama stub)
+                providers=(claude openai openrouter ollama stub)
 
                 _arguments -C \
                     '1: :->command' \
@@ -190,9 +190,10 @@ public class CompletionGenerator : ICompletionGenerator
                     'serve' = @('--port', '-p')
                 }
 
-                $providers = @('claude', 'openai', 'ollama', 'stub')
+                $providers = @('claude', 'openai', 'openrouter', 'ollama', 'stub')
                 $configKeys = @('activeProvider', 'claude.apiKey', 'claude.model', 'claude.baseUrl',
                                'openai.apiKey', 'openai.model', 'openai.baseUrl',
+                               'openrouter.apiKey', 'openrouter.model', 'openrouter.baseUrl', 'openrouter.siteName', 'openrouter.siteUrl',
                                'ollama.model', 'ollama.baseUrl')
 
                 $elements = $commandAst.CommandElements
@@ -259,7 +260,7 @@ public class CompletionGenerator : ICompletionGenerator
             # run command options
             complete -c git-agent -n "__fish_seen_subcommand_from run" -s x -l exec -d "Execute the resulting commands"
             complete -c git-agent -n "__fish_seen_subcommand_from run" -s i -l interactive -d "Confirm each step"
-            complete -c git-agent -n "__fish_seen_subcommand_from run" -s p -l provider -d "Override the active provider" -xa "claude openai ollama stub"
+            complete -c git-agent -n "__fish_seen_subcommand_from run" -s p -l provider -d "Override the active provider" -xa "claude openai openrouter ollama stub"
             complete -c git-agent -n "__fish_seen_subcommand_from run" -l no-cache -d "Skip cache"
 
             # config subcommands
@@ -271,10 +272,10 @@ public class CompletionGenerator : ICompletionGenerator
             complete -c git-agent -n "__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from show set get use path reset" -a "reset" -d "Reset to defaults"
 
             # config use providers
-            complete -c git-agent -n "__fish_seen_subcommand_from use" -a "claude openai ollama stub" -d "Provider"
+            complete -c git-agent -n "__fish_seen_subcommand_from use" -a "claude openai openrouter ollama stub" -d "Provider"
 
             # config set/get keys
-            complete -c git-agent -n "__fish_seen_subcommand_from set get" -a "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl ollama.model ollama.baseUrl"
+            complete -c git-agent -n "__fish_seen_subcommand_from set get" -a "activeProvider claude.apiKey claude.model claude.baseUrl openai.apiKey openai.model openai.baseUrl openrouter.apiKey openrouter.model openrouter.baseUrl openrouter.siteName openrouter.siteUrl ollama.model ollama.baseUrl"
 
             # cache subcommands
             complete -c git-agent -n "__fish_seen_subcommand_from cache; and not __fish_seen_subcommand_from clear path" -a "clear" -d "Clear all cached responses"
@@ -284,7 +285,7 @@ public class CompletionGenerator : ICompletionGenerator
             complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s s -l suggest -d "Show AI-suggested resolutions"
             complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s r -l resolve -d "Interactively resolve conflicts"
             complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s a -l apply -d "Auto-apply AI-suggested resolutions"
-            complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s p -l provider -d "Override the active provider" -xa "claude openai ollama stub"
+            complete -c git-agent -n "__fish_seen_subcommand_from conflicts" -s p -l provider -d "Override the active provider" -xa "claude openai openrouter ollama stub"
 
             # completions shells
             complete -c git-agent -n "__fish_seen_subcommand_from completions" -a "bash zsh powershell fish" -d "Shell type"

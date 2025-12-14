@@ -14,6 +14,7 @@ namespace GitAgent;
 [JsonSerializable(typeof(ClaudeConfig))]
 [JsonSerializable(typeof(OpenAIConfig))]
 [JsonSerializable(typeof(OllamaConfig))]
+[JsonSerializable(typeof(OpenRouterConfig))]
 internal partial class ConfigJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
@@ -51,6 +52,19 @@ internal partial class OpenAIJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(OllamaRequest))]
 [JsonSerializable(typeof(OllamaResponse))]
 internal partial class OllamaJsonContext : JsonSerializerContext;
+
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+[JsonSerializable(typeof(OpenRouterRequest))]
+[JsonSerializable(typeof(OpenRouterResponse))]
+[JsonSerializable(typeof(GitToolInput))]
+[JsonSerializable(typeof(ConflictToolInput))]
+[JsonSerializable(typeof(JsonSchema))]
+[JsonSerializable(typeof(JsonSchemaProperty))]
+[JsonSerializable(typeof(JsonSchemaItems))]
+[JsonSerializable(typeof(Dictionary<string, JsonSchemaProperty>))]
+internal partial class OpenRouterJsonContext : JsonSerializerContext;
 
 [JsonSerializable(typeof(JsonRpcRequest))]
 [JsonSerializable(typeof(JsonRpcResponse))]

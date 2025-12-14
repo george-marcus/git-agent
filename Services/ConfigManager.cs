@@ -12,6 +12,8 @@ public interface IConfigManager
 
 public class ConfigManager : IConfigManager
 {
+    private const int CurrentConfigVersion = 2;
+
     public string ConfigPath { get; }
 
     public ConfigManager()
@@ -30,7 +32,7 @@ public class ConfigManager : IConfigManager
     {
         if (!File.Exists(ConfigPath))
         {
-            var defaultConfig = new GitAgentConfig();
+            var defaultConfig = new GitAgentConfig { ConfigVersion = CurrentConfigVersion };
             await SaveAsync(defaultConfig);
             return defaultConfig;
         }
@@ -38,13 +40,21 @@ public class ConfigManager : IConfigManager
         try
         {
             var json = await File.ReadAllTextAsync(ConfigPath);
-            return JsonSerializer.Deserialize(json, ConfigJsonContext.Default.GitAgentConfig) ?? new GitAgentConfig();
+            var config = JsonSerializer.Deserialize(json, ConfigJsonContext.Default.GitAgentConfig) ?? new GitAgentConfig();
+
+            if (config.ConfigVersion < CurrentConfigVersion)
+            {
+                config.ConfigVersion = CurrentConfigVersion;
+                await SaveAsync(config);
+            }
+
+            return config;
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"Warning: Failed to load config from {ConfigPath}: {ex.Message}");
             await Console.Error.WriteLineAsync("Using default configuration.");
-            return new GitAgentConfig();
+            return new GitAgentConfig {ConfigVersion = CurrentConfigVersion };
         }
     }
 
