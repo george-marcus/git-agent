@@ -24,7 +24,7 @@ public class CompletionGenerator : ICompletionGenerator
                 prev="${COMP_WORDS[COMP_CWORD-1]}"
 
                 # Top-level commands
-                commands="run config providers cache conflicts completions serve help"
+                commands="run config providers cache conflicts completions help"
 
                 # Config subcommands
                 config_commands="show set get use path reset"
@@ -58,10 +58,6 @@ public class CompletionGenerator : ICompletionGenerator
                         ;;
                     completions)
                         COMPREPLY=( $(compgen -W "${completions_shells}" -- ${cur}) )
-                        return 0
-                        ;;
-                    serve)
-                        COMPREPLY=( $(compgen -W "--port -p" -- ${cur}) )
                         return 0
                         ;;
                     use|--provider|-p)
@@ -105,7 +101,6 @@ public class CompletionGenerator : ICompletionGenerator
                     'cache:Manage HTTP response cache'
                     'conflicts:Analyze and resolve merge conflicts'
                     'completions:Generate shell completions'
-                    'serve:Start JSON-RPC server for IDE integration'
                     'help:Show help and list all available commands'
                 )
 
@@ -159,10 +154,6 @@ public class CompletionGenerator : ICompletionGenerator
                             completions)
                                 _arguments '1:shell:(bash zsh powershell fish)'
                                 ;;
-                            serve)
-                                _arguments \
-                                    '(-p --port)'{-p,--port}'[Port to listen on]:port:'
-                                ;;
                         esac
                         ;;
                 esac
@@ -187,7 +178,6 @@ public class CompletionGenerator : ICompletionGenerator
                     'cache' = @('clear', 'path')
                     'conflicts' = @('--suggest', '-s', '--resolve', '-r', '--apply', '-a', '--provider', '-p')
                     'completions' = @('bash', 'zsh', 'powershell', 'fish')
-                    'serve' = @('--port', '-p')
                 }
 
                 $providers = @('claude', 'openai', 'openrouter', 'ollama', 'stub')
@@ -211,7 +201,7 @@ public class CompletionGenerator : ICompletionGenerator
 
                 if ($elements.Count -eq 1 -or ($elements.Count -eq 2 -and $wordToComplete)) {
                     # Complete top-level commands
-                    $completions = @('run', 'config', 'providers', 'cache', 'conflicts', 'completions', 'serve', 'help')
+                    $completions = @('run', 'config', 'providers', 'cache', 'conflicts', 'completions', 'help')
                 }
                 elseif ($commands.ContainsKey($command)) {
                     $completions = $commands[$command]
@@ -254,7 +244,6 @@ public class CompletionGenerator : ICompletionGenerator
             complete -c git-agent -n "__fish_use_subcommand" -a "cache" -d "Manage HTTP response cache"
             complete -c git-agent -n "__fish_use_subcommand" -a "conflicts" -d "Analyze and resolve merge conflicts"
             complete -c git-agent -n "__fish_use_subcommand" -a "completions" -d "Generate shell completions"
-            complete -c git-agent -n "__fish_use_subcommand" -a "serve" -d "Start JSON-RPC server for IDE integration"
             complete -c git-agent -n "__fish_use_subcommand" -a "help" -d "Show help"
 
             # run command options
@@ -289,9 +278,6 @@ public class CompletionGenerator : ICompletionGenerator
 
             # completions shells
             complete -c git-agent -n "__fish_seen_subcommand_from completions" -a "bash zsh powershell fish" -d "Shell type"
-
-            # serve options
-            complete -c git-agent -n "__fish_seen_subcommand_from serve" -s p -l port -d "Port to listen on"
             """;
     }
 }

@@ -66,12 +66,3 @@ internal partial class OllamaJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(Dictionary<string, JsonSchemaProperty>))]
 internal partial class OpenRouterJsonContext : JsonSerializerContext;
 
-[JsonSerializable(typeof(JsonRpcRequest))]
-[JsonSerializable(typeof(JsonRpcResponse))]
-[JsonSerializable(typeof(JsonRpcErrorResponse))]
-[JsonSerializable(typeof(RunResult))]
-[JsonSerializable(typeof(ConflictsResult))]
-[JsonSerializable(typeof(SuggestResult))]
-[JsonSerializable(typeof(StatusResult))]
-[JsonSerializable(typeof(ProvidersResult))]
-internal partial class JsonRpcJsonContext : JsonSerializerContext;

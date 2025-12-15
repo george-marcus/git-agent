@@ -31,7 +31,6 @@ namespace GitAgent.Commands
                 await Console.Out.WriteLineAsync("    conflicts -a      Auto-apply AI-suggested resolutions");
                 await Console.Out.WriteLineAsync("    conflicts -r      Interactively resolve conflicts");
                 await Console.Out.WriteLineAsync("  completions <shell> Generate shell completion scripts (bash, zsh, powershell, fish)");
-                await Console.Out.WriteLineAsync("  serve               Start JSON-RPC server for IDE integration");
                 await Console.Out.WriteLineAsync("  help [command]      Show help for a command");
                 await Console.Out.WriteLineAsync();
                 await Console.Out.WriteLineAsync("Options:");

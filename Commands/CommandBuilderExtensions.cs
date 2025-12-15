@@ -17,7 +17,6 @@ public static class CommandBuilderExtensions
         root.AddCommand(CacheCommand.BuildCacheCommand());
         root.AddCommand(ConflictsCommand.BuildConflictsCommand());
         root.AddCommand(CompletionsCommand.BuildCompletionsCommand());
-        root.AddCommand(GRPCServeCommand.BuildServeCommand());
         root.AddCommand(HelpCommand.BuildHelpCommand());
 
         return root;

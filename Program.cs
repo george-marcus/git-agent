@@ -29,7 +29,6 @@ var builder = new CommandLineBuilder(CommandBuilderExtensions.BuildRootCommand()
                 services.AddSingleton<ICommandExecutor, CommandExecutor>();
                 services.AddSingleton<IConflictResolver, ConflictResolver>();
                 services.AddSingleton<ICompletionGenerator, CompletionGenerator>();
-                services.AddSingleton<IJsonRpcServer, JsonRpcServer>();
             });
         })
     .UseDefaults();

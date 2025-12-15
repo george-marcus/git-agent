@@ -329,26 +329,6 @@ git-agent completions fish > ~/.config/fish/completions/git-agent.fish
 
 ---
 
-### `serve`
-
-Start JSON-RPC server for IDE integration.
-
-```bash
-git-agent serve [options]
-```
-
-**Options:**
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--port` | `-p` | Port to listen on (default: 9123) |
-
-**Example:**
-```bash
-git-agent serve --port 9123
-```
-
----
-
 ### `cache`
 
 Manage HTTP response cache.
@@ -491,54 +471,6 @@ Alternatively, use the integrated terminal:
 
 - Open **View** → **Tool Windows** → **Terminal**
 - Run git-agent commands directly
-
----
-
-### JSON-RPC Server Integration
-
-For custom IDE integrations, git-agent provides a JSON-RPC server:
-
-```bash
-git-agent serve --port 9123
-```
-
-#### Protocol
-
-Send JSON-RPC 2.0 requests over TCP:
-
-```json
-{"jsonrpc": "2.0", "method": "git-agent/run", "params": {"instruction": "commit all changes"}, "id": 1}
-```
-
-#### Available Methods
-
-| Method | Parameters | Description |
-|--------|------------|-------------|
-| `git-agent/run` | `instruction`, `provider?` | Generate git commands |
-| `git-agent/conflicts` | - | Get conflict analysis |
-| `git-agent/suggest` | - | Get resolution suggestions |
-| `git-agent/status` | - | Get repository status |
-| `git-agent/providers` | - | List available providers |
-
-#### Example Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "commands": [
-      {"commandText": "git add .", "risk": "safe"},
-      {"commandText": "git commit -m \"Update files\"", "risk": "safe"}
-    ],
-    "context": {
-      "branch": "main",
-      "hasUncommittedChanges": true,
-      "mergeState": "None"
-    }
-  },
-  "id": 1
-}
-```
 
 ---
 
@@ -739,49 +671,7 @@ Cache status is displayed when available:
 (prompt cache created: 200 tokens cached)
 ```
 
-## Project Structure
 
-```
-├── Program.cs                      # CLI entry point with DI setup
-├── Commands/
-│   └── CommandBuilderExtensions.cs # CLI command definitions
-├── Configuration/
-│   ├── ConfigManager.cs            # Configuration loading/saving
-│   ├── GitAgentConfig.cs           # Root config model
-│   ├── ProviderConfigs.cs          # Provider config container
-│   ├── ClaudeConfig.cs             # Claude provider settings
-│   ├── OpenAIConfig.cs             # OpenAI provider settings
-│   ├── OpenRouterConfig.cs         # OpenRouter provider settings
-│   └── OllamaConfig.cs             # Ollama provider settings
-├── Models/
-│   ├── GeneratedCommand.cs         # Generated command with risk level
-│   ├── GitTools.cs                 # Tool schema for LLM function calling
-│   └── RepoContext.cs              # Git repository context + merge state
-├── Providers/
-│   ├── IModelProvider.cs           # Provider interface
-│   ├── ProviderFactory.cs          # Provider factory with DI
-│   ├── ClaudeProvider.cs           # Anthropic Claude implementation
-│   ├── OpenAIProvider.cs           # OpenAI implementation
-│   ├── OpenRouterProvider.cs       # OpenRouter multi-model implementation
-│   ├── OllamaProvider.cs           # Ollama local LLM implementation
-│   └── StubProvider.cs             # Testing stub provider
-├── Services/
-│   ├── CachingHttpHandler.cs       # HTTP response caching
-│   ├── CommandExecutor.cs          # Git command execution
-│   ├── CompletionGenerator.cs      # Shell completion scripts
-│   ├── ConflictResolver.cs         # Merge conflict analysis & resolution
-│   ├── GitInspector.cs             # Git repository inspection
-│   ├── JsonRpcServer.cs            # JSON-RPC server for IDEs
-│   ├── PromptBuilder.cs            # LLM prompt construction
-│   ├── ResponseParser.cs           # Text response parsing (Ollama fallback)
-│   └── SafetyValidator.cs          # Command risk validation
-├── vscode-extension/               # VS Code extension
-│   ├── src/extension.ts            # Extension entry point
-│   ├── package.json                # Extension manifest
-│   └── README.md                   # Extension documentation
-├── scripts/                        # Installation scripts
-└── tests/                          # xUnit test suite
-```
 
 ## License
 
