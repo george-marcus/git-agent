@@ -38,22 +38,23 @@ public class SafetyValidator : ISafetyValidator
         foreach (var cmd in commands)
         {
             var text = cmd.CommandText.Trim();
+            var providerRisk = cmd.Risk;
 
             if (IsDestructive(text))
             {
                 cmd.Risk = "destructive";
-                cmd.Reason = GetDestructiveReason(text);
+                cmd.Reason ??= GetDestructiveReason(text);
                 result.Add(cmd);
             }
             else if (IsSafe(text))
             {
-                cmd.Risk = "safe";
+                cmd.Risk = GetHigherRisk(providerRisk, "safe");
                 result.Add(cmd);
             }
             else
             {
-                cmd.Risk = "unknown";
-                cmd.Reason = "Not in allowlist; requires manual review";
+                cmd.Risk = GetHigherRisk(providerRisk, "unknown");
+                cmd.Reason ??= "Not in allowlist; requires manual review";
                 if (text.StartsWith("git ", StringComparison.OrdinalIgnoreCase))
                 {
                     result.Add(cmd);
@@ -62,6 +63,22 @@ public class SafetyValidator : ISafetyValidator
         }
 
         return result;
+    }
+
+    private static string GetHigherRisk(string providerRisk, string validatorRisk)
+    {
+        var riskLevel = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["safe"] = 0,
+            ["unknown"] = 1,
+            ["moderate"] = 2,
+            ["destructive"] = 3
+        };
+
+        var providerLevel = riskLevel.GetValueOrDefault(providerRisk, 1);
+        var validatorLevel = riskLevel.GetValueOrDefault(validatorRisk, 1);
+
+        return providerLevel >= validatorLevel ? providerRisk : validatorRisk;
     }
 
     private static bool IsSafe(string command)

@@ -8,14 +8,14 @@ public class SafetyValidatorTests
 {
     private readonly SafetyValidator _validator = new();
 
-    private static GeneratedCommand CreateCommand(string text) => new()
+    private static GeneratedCommand CreateCommand(string text, string risk = "safe") => new()
     {
         CommandText = text,
-        Risk = "unknown"
+        Risk = risk
     };
 
     private static List<GeneratedCommand> CreateCommands(params string[] texts) =>
-        texts.Select(CreateCommand).ToList();
+        texts.Select(t => CreateCommand(t)).ToList();
 
     [Fact]
     public void FilterAndAnnotate_WithEmptyList_ReturnsEmptyList()
@@ -90,7 +90,7 @@ public class SafetyValidatorTests
     [InlineData("git blame file.txt")]
     public void FilterAndAnnotate_UnknownGitCommands_MarkedAsUnknown(string command)
     {
-        var commands = CreateCommands(command);
+        var commands = new List<GeneratedCommand> { CreateCommand(command, "safe") };
 
         var result = _validator.FilterAndAnnotate(commands);
 
@@ -168,5 +168,64 @@ public class SafetyValidatorTests
         result.Should().HaveCount(1);
         result[0].Risk.Should().Be("destructive");
         result[0].Reason.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void FilterAndAnnotate_PreservesProviderRisk_WhenHigherThanValidator()
+    {
+        // Provider marked a safe command as destructive - validator should preserve it
+        var commands = new List<GeneratedCommand>
+        {
+            CreateCommand("git status", "destructive")
+        };
+
+        var result = _validator.FilterAndAnnotate(commands);
+
+        result.Should().HaveCount(1);
+        result[0].Risk.Should().Be("destructive");
+    }
+
+    [Fact]
+    public void FilterAndAnnotate_PreservesProviderRisk_ModerateOnSafeCommand()
+    {
+        // Provider marked a safe command as moderate - validator should preserve it
+        var commands = new List<GeneratedCommand>
+        {
+            CreateCommand("git commit -m \"test\"", "moderate")
+        };
+
+        var result = _validator.FilterAndAnnotate(commands);
+
+        result.Should().HaveCount(1);
+        result[0].Risk.Should().Be("moderate");
+    }
+
+    [Fact]
+    public void FilterAndAnnotate_ValidatorEscalates_WhenProviderUnderestimates()
+    {
+        // Provider said safe but validator detects destructive pattern
+        var commands = new List<GeneratedCommand>
+        {
+            CreateCommand("git reset --hard HEAD", "safe")
+        };
+
+        var result = _validator.FilterAndAnnotate(commands);
+
+        result.Should().HaveCount(1);
+        result[0].Risk.Should().Be("destructive");
+    }
+
+    [Fact]
+    public void FilterAndAnnotate_PreservesProviderReason_WhenProviderRiskIsHigher()
+    {
+        var commands = new List<GeneratedCommand>
+        {
+            new() { CommandText = "git status", Risk = "destructive", Reason = "Provider's custom reason" }
+        };
+
+        var result = _validator.FilterAndAnnotate(commands);
+
+        result.Should().HaveCount(1);
+        result[0].Reason.Should().Be("Provider's custom reason");
     }
 }
