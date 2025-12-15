@@ -437,43 +437,6 @@ Alternatively, use the integrated terminal:
 
 ---
 
-### JetBrains IDEs (IntelliJ, Rider, WebStorm, etc.)
-
-#### External Tools Setup
-
-1. Go to **File** → **Settings** → **Tools** → **External Tools**
-2. Click **+** to add a new tool:
-
-| Field | Value |
-|-------|-------|
-| Name | `Git Agent Run` |
-| Program | `git-agent` |
-| Arguments | `run "$Prompt$"` |
-| Working directory | `$ProjectFileDir$` |
-
-3. Add another for execution:
-
-| Field | Value |
-|-------|-------|
-| Name | `Git Agent Execute` |
-| Program | `git-agent` |
-| Arguments | `run "$Prompt$" --exec` |
-| Working directory | `$ProjectFileDir$` |
-
-#### Assign Keyboard Shortcuts
-
-1. Go to **File** → **Settings** → **Keymap**
-2. Search for "External Tools"
-3. Right-click on your git-agent tool → **Add Keyboard Shortcut**
-4. Assign `Ctrl+Shift+G` or your preferred shortcut
-
-#### Using Terminal
-
-- Open **View** → **Tool Windows** → **Terminal**
-- Run git-agent commands directly
-
----
-
 ## Configuration
 
 Configuration is stored in `~/.git-agent/config.json`:
@@ -533,20 +496,8 @@ Configuration is stored in `~/.git-agent/config.json`:
    # Use Claude via OpenRouter
    git-agent config set openrouter.model anthropic/claude-3-opus
 
-   # Use GPT-4 Turbo
-   git-agent config set openrouter.model openai/gpt-4-turbo
-
-   # Use Mistral Large
-   git-agent config set openrouter.model mistralai/mistral-large
-
    # Use Llama 3.1 405B
    git-agent config set openrouter.model meta-llama/llama-3.1-405b-instruct
-   ```
-
-4. **Use git-agent:**
-   ```bash
-   git-agent run "show me the last 5 commits"
-   git-agent run "commit all changes" -x
    ```
 
 ### Popular Models
@@ -554,23 +505,10 @@ Configuration is stored in `~/.git-agent/config.json`:
 | Model | ID |
 |-------|-----|
 | GPT-4o | `openai/gpt-4o` |
-| GPT-4 Turbo | `openai/gpt-4-turbo` |
 | Claude 3 Opus | `anthropic/claude-3-opus` |
-| Claude 3.5 Sonnet | `anthropic/claude-3.5-sonnet` |
-| Gemini Pro 1.5 | `google/gemini-pro-1.5` |
-| Mistral Large | `mistralai/mistral-large` |
 | Llama 3.1 405B | `meta-llama/llama-3.1-405b-instruct` |
 
 See the full model list at [openrouter.ai/models](https://openrouter.ai/models).
-
-### App Attribution (Optional)
-
-OpenRouter supports app attribution headers for leaderboard rankings:
-
-```bash
-git-agent config set openrouter.siteName "MyApp"
-git-agent config set openrouter.siteUrl "https://myapp.example.com"
-```
 
 ---
 
