@@ -3,6 +3,8 @@ using GitAgent.Providers;
 using GitAgent.Services;
 using System.CommandLine;
 using System.CommandLine.Hosting;
+using System.Reflection;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GitAgent.Commands
@@ -37,26 +39,24 @@ namespace GitAgent.Commands
                 await Console.Out.WriteLineAsync($"Active provider: {config.ActiveProvider}");
                 await Console.Out.WriteLineAsync();
                 await Console.Out.WriteLineAsync("Provider settings:");
-                await Console.Out.WriteLineAsync($"  Claude:");
-                await Console.Out.WriteLineAsync($"    API Key: {ConfigHelpers.MaskApiKey(config.Providers.Claude.ApiKey)}");
-                await Console.Out.WriteLineAsync($"    Model:   {config.Providers.Claude.Model}");
-                await Console.Out.WriteLineAsync($"    BaseUrl: {config.Providers.Claude.BaseUrl}");
-                await Console.Out.WriteLineAsync();
-                await Console.Out.WriteLineAsync($"  OpenAI:");
-                await Console.Out.WriteLineAsync($"    API Key: {ConfigHelpers.MaskApiKey(config.Providers.OpenAI.ApiKey)}");
-                await Console.Out.WriteLineAsync($"    Model:   {config.Providers.OpenAI.Model}");
-                await Console.Out.WriteLineAsync($"    BaseUrl: {config.Providers.OpenAI.BaseUrl}");
-                await Console.Out.WriteLineAsync();
-                await Console.Out.WriteLineAsync($"  OpenRouter:");
-                await Console.Out.WriteLineAsync($"    API Key: {ConfigHelpers.MaskApiKey(config.Providers.OpenRouter.ApiKey)}");
-                await Console.Out.WriteLineAsync($"    Model:   {config.Providers.OpenRouter.Model}");
-                await Console.Out.WriteLineAsync($"    BaseUrl: {config.Providers.OpenRouter.BaseUrl}");
-                await Console.Out.WriteLineAsync($"    Site Name: {config.Providers.OpenRouter.SiteName}");
-                await Console.Out.WriteLineAsync($"    Site Url: {config.Providers.OpenRouter.SiteUrl}");
-                await Console.Out.WriteLineAsync();
-                await Console.Out.WriteLineAsync($"  Ollama:");
-                await Console.Out.WriteLineAsync($"    Model:   {config.Providers.Ollama.Model}");
-                await Console.Out.WriteLineAsync($"    BaseUrl: {config.Providers.Ollama.BaseUrl}");
+
+                foreach (var providerProp in typeof(ProviderConfigs).GetProperties())
+                {
+                    var providerInstance = providerProp.GetValue(config.Providers);
+                    if (providerInstance == null) continue;
+
+                    await Console.Out.WriteLineAsync($"  {providerProp.Name}:");
+
+                    foreach (var prop in providerInstance.GetType().GetProperties())
+                    {
+                        var value = prop.GetValue(providerInstance)?.ToString() ?? "";
+                        var displayValue = prop.Name.Contains("ApiKey", StringComparison.OrdinalIgnoreCase)
+                            ? ConfigHelpers.MaskApiKey(value)
+                            : value;
+                        await Console.Out.WriteLineAsync($"    {prop.Name}: {displayValue}");
+                    }
+                    await Console.Out.WriteLineAsync();
+                }
             });
             return showCmd;
         }
@@ -200,96 +200,79 @@ internal static class ConfigHelpers
 
     public static bool SetConfigValue(GitAgentConfig config, string key, string value)
     {
-        switch (key.ToLowerInvariant())
-        {
-            case "activeprovider":
-            case "provider":
-                config.ActiveProvider = value.ToLowerInvariant();
-                return true;
-            case "claude.apikey":
-                config.Providers.Claude.ApiKey = value;
-                return true;
-            case "claude.model":
-                config.Providers.Claude.Model = value;
-                return true;
-            case "claude.baseurl":
-                config.Providers.Claude.BaseUrl = value;
-                return true;
-            case "openai.apikey":
-                config.Providers.OpenAI.ApiKey = value;
-                return true;
-            case "openai.model":
-                config.Providers.OpenAI.Model = value;
-                return true;
-            case "openai.baseurl":
-                config.Providers.OpenAI.BaseUrl = value;
-                return true;
-            case "openrouter.apikey":
-                config.Providers.OpenRouter.ApiKey = value;
-                return true;
-            case "openrouter.model":
-                config.Providers.OpenRouter.Model = value;
-                return true;
-            case "openrouter.baseurl":
-                config.Providers.OpenRouter.BaseUrl = value;
-                return true;
-            case "openrouter.sitename":
-                config.Providers.OpenRouter.SiteName = value;
-                return true;
-            case "openrouter.siteurl":
-                config.Providers.OpenRouter.SiteUrl = value;
-                return true;
-            case "ollama.model":
-                config.Providers.Ollama.Model = value;
-                return true;
-            case "ollama.baseurl":
-                config.Providers.Ollama.BaseUrl = value;
-                return true;
+        var keyLower = key.ToLowerInvariant();
 
-            default:
-                return false;
+        if (keyLower is "activeprovider" or "provider")
+        {
+            config.ActiveProvider = value.ToLowerInvariant();
+            return true;
         }
+
+        var (targetProp, providerInstance) = GetTargetProperty(config, key);
+        if (providerInstance == null || targetProp == null)
+        {
+            return false;
+        }
+        if (targetProp == null || !targetProp.CanWrite) return false;
+
+        var convertedValue = Convert.ChangeType(value, targetProp.PropertyType);
+        targetProp.SetValue(providerInstance, convertedValue);
+        return true;
     }
 
     public static string? GetConfigValue(GitAgentConfig config, string key)
     {
-        return key.ToLowerInvariant() switch
+        var keyLower = key.ToLowerInvariant();
+        if (keyLower is "activeprovider" or "provider")
         {
-            "activeprovider" or "provider" => config.ActiveProvider,
-            "claude.apikey" => config.Providers.Claude.ApiKey,
-            "claude.model" => config.Providers.Claude.Model,
-            "claude.baseurl" => config.Providers.Claude.BaseUrl,
-            "openai.apikey" => config.Providers.OpenAI.ApiKey,
-            "openai.model" => config.Providers.OpenAI.Model,
-            "openai.baseurl" => config.Providers.OpenAI.BaseUrl,
-            "openrouter.apikey" => config.Providers.OpenRouter.ApiKey,
-            "openrouter.model" => config.Providers.OpenRouter.Model,
-            "openrouter.baseurl" => config.Providers.OpenRouter.BaseUrl,
-            "openrouter.sitename" => config.Providers.OpenRouter.SiteName,
-            "openrouter.siteurl" => config.Providers.OpenRouter.SiteUrl,
-            "ollama.model" => config.Providers.Ollama.Model,
-            "ollama.baseurl" => config.Providers.Ollama.BaseUrl,
-            _ => null
-        };
+            return config.ActiveProvider;
+        }
+
+        var (targetProp, providerInstance) = GetTargetProperty(config, key);
+        if (providerInstance == null || targetProp == null)
+        {
+            return null;
+        }
+        return targetProp?.GetValue(providerInstance)?.ToString();
     }
 
     public static async Task PrintAvailableKeysAsync()
     {
         await Console.Error.WriteLineAsync("Available keys:");
-        await Console.Error.WriteLineAsync("  activeProvider      - Active provider (claude, openai, openrouter, ollama, stub)");
-        await Console.Error.WriteLineAsync("  claude.apiKey       - Claude API key");
-        await Console.Error.WriteLineAsync("  claude.model        - Claude model name");
-        await Console.Error.WriteLineAsync("  claude.baseUrl      - Claude API base URL");
-        await Console.Error.WriteLineAsync("  openai.apiKey       - OpenAI API key");
-        await Console.Error.WriteLineAsync("  openai.model        - OpenAI model name");
-        await Console.Error.WriteLineAsync("  openai.baseUrl      - OpenAI API base URL");
-        await Console.Error.WriteLineAsync("  openrouter.apiKey   - OpenRouter API key");
-        await Console.Error.WriteLineAsync("  openrouter.model    - OpenRouter model name");
-        await Console.Error.WriteLineAsync("  openrouter.baseUrl  - OpenRouter API base URL");
-        await Console.Error.WriteLineAsync("  openrouter.sitename - OpenRouter API Site Name");
-        await Console.Error.WriteLineAsync("  openrouter.siteurl  - OpenRouter API Site Url");
-        await Console.Error.WriteLineAsync("  ollama.model        - Ollama model name");
-        await Console.Error.WriteLineAsync("  ollama.baseUrl      - Ollama API base URL");
+        await Console.Error.WriteLineAsync("  activeProvider - Active provider (claude, openai, openrouter, ollama, stub)");
+        await Console.Error.WriteLineAsync();
+
+        foreach (var providerProp in typeof(ProviderConfigs).GetProperties())
+        {
+            var providerType = providerProp.PropertyType;
+            var providerName = providerProp.Name.ToLowerInvariant();
+
+            foreach (var prop in providerType.GetProperties())
+            {
+                var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
+                var keyName = jsonAttr?.Name ?? prop.Name;
+                var description = prop.Name;
+                await Console.Out.WriteLineAsync($"  {providerName}.{keyName,-12} - {providerProp.Name} {description}");
+            }
+        }
+    }
+
+    private static (PropertyInfo? TargetProperty, object? ProviderInstance) GetTargetProperty(GitAgentConfig config, string key)
+    {
+        var parts = key.Split('.', 2);
+        if (parts.Length != 2) return default;
+
+        var providerName = parts[0];
+        var propertyName = parts[1];
+
+        var providerProp = typeof(ProviderConfigs).GetProperties().FirstOrDefault(p => p.Name.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+        if (providerProp == null) return default;
+
+        var providerInstance = providerProp.GetValue(config.Providers);
+        if (providerInstance == null) return default;
+
+        var targetProp = providerInstance.GetType().GetProperties().FirstOrDefault(p => p.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
+        return (targetProp, providerInstance);
     }
 }
 
