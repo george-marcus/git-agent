@@ -2,7 +2,7 @@ using System.CommandLine;
 
 namespace GitAgent.Commands;
 
-public static class CommandBuilderExtensions
+public static class CommandsBuilder
 {
     public static RootCommand BuildRootCommand()
     {

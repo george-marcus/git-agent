@@ -1,4 +1,6 @@
-using GitAgent.Services;
+using GitAgent.Configuration;
+using GitAgent.Services.AI;
+using GitAgent.Services.Infrastructure;
 
 namespace GitAgent.Providers;
 

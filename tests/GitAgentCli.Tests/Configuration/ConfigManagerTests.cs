@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using GitAgent.Configuration;
-using GitAgent.Services;
+using GitAgent.Configuration.ProviderConfigsModels;
 
 namespace GitAgentCli.Tests.Configuration;
 

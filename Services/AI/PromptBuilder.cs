@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text;
 using GitAgent.Models;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.AI;
 
 public interface IPromptBuilder
 {

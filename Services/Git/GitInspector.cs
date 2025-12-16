@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using GitAgent.Models;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.Git;
 
 public interface IGitInspector
 {

@@ -1,4 +1,4 @@
-﻿using GitAgent.Services;
+﻿using GitAgent.Services.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using System.CommandLine;
 using System.CommandLine.Hosting;

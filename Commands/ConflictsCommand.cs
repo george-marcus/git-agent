@@ -1,5 +1,5 @@
 ﻿using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.Git;
 using Microsoft.Extensions.DependencyInjection;
 using System.CommandLine;
 using System.CommandLine.Hosting;
@@ -79,8 +79,8 @@ namespace GitAgent.Commands
                     {
                         var typeColor = section.ConflictType switch
                         {
-                            Services.ConflictType.SameChange => "\u001b[32m",
-                            Services.ConflictType.AdjacentChanges => "\u001b[33m",
+                            ConflictType.SameChange => "\u001b[32m",
+                            ConflictType.AdjacentChanges => "\u001b[33m",
                             _ => "\u001b[31m"
                         };
                         await Console.Out.WriteLineAsync($"  Lines {section.StartLine}-{section.EndLine}: {typeColor}{section.ConflictType}\u001b[0m");
@@ -132,9 +132,9 @@ namespace GitAgent.Commands
                                 {
                                     var strategyColor = resolution.Strategy switch
                                     {
-                                        Services.ResolutionStrategy.AiSuggested => "\u001b[35m",
-                                        Services.ResolutionStrategy.AcceptOurs => "\u001b[32m",
-                                        Services.ResolutionStrategy.AcceptTheirs => "\u001b[34m",
+                                        ResolutionStrategy.AiSuggested => "\u001b[35m",
+                                        ResolutionStrategy.AcceptOurs => "\u001b[32m",
+                                        ResolutionStrategy.AcceptTheirs => "\u001b[34m",
                                         _ => "\u001b[33m"
                                     };
                                     await Console.Out.WriteLineAsync($"    {optionNum}. {strategyColor}[{resolution.Strategy}]\u001b[0m {resolution.Description}");
@@ -153,7 +153,7 @@ namespace GitAgent.Commands
 
                         // Get only AI-suggested resolutions
                         var aiResolutions = resolutions
-                            .Where(r => r.Strategy == Services.ResolutionStrategy.AiSuggested)
+                            .Where(r => r.Strategy == ResolutionStrategy.AiSuggested)
                             .ToList();
 
                         if (aiResolutions.Count == 0)
@@ -240,11 +240,11 @@ namespace GitAgent.Commands
 
                             if (resolvedContent != null)
                             {
-                                var resolution = new Services.ConflictResolution
+                                var resolution = new ConflictResolution
                                 {
                                     FilePath = conflictFile.FilePath,
                                     Section = section,
-                                    Strategy = Services.ResolutionStrategy.Manual,
+                                    Strategy = ResolutionStrategy.Manual,
                                     Description = "Manual resolution",
                                     ResolvedContent = resolvedContent
                                 };

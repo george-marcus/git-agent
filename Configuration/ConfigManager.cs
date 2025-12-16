@@ -1,7 +1,6 @@
-using GitAgent.Configuration;
 using System.Text.Json;
 
-namespace GitAgent.Services;
+namespace GitAgent.Configuration;
 
 public interface IConfigManager
 {

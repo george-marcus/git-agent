@@ -1,11 +1,11 @@
 ﻿using GitAgent.Configuration;
 using GitAgent.Providers;
-using GitAgent.Services;
 using System.CommandLine;
 using System.CommandLine.Hosting;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
+using GitAgent.Configuration.ProviderConfigsModels;
 
 namespace GitAgent.Commands
 {

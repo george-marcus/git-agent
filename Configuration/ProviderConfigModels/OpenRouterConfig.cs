@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace GitAgent.Configuration;
+namespace GitAgent.Configuration.ProviderConfigsModels;
 
 public class OpenRouterConfig
 {

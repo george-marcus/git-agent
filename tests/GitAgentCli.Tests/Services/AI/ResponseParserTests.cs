@@ -1,7 +1,7 @@
 using FluentAssertions;
-using GitAgent.Services;
+using GitAgent.Services.AI;
 
-namespace GitAgentCli.Tests.Services;
+namespace GitAgentCli.Tests.Services.AI;
 
 public class ResponseParserTests
 {

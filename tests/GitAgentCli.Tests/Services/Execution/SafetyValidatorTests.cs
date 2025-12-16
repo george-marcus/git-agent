@@ -1,8 +1,8 @@
 using FluentAssertions;
 using GitAgent.Models;
-using GitAgent.Services;
+using GitAgent.Services.Execution;
 
-namespace GitAgentCli.Tests.Services;
+namespace GitAgentCli.Tests.Services.Execution;
 
 public class SafetyValidatorTests
 {

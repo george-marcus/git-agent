@@ -1,7 +1,7 @@
 using GitAgent.Models;
 using GitAgent.Providers;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.Git;
 
 public interface IConflictResolver
 {

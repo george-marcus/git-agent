@@ -1,6 +1,6 @@
 using GitAgent.Models;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.Execution;
 
 public interface ISafetyValidator
 {

@@ -1,10 +1,10 @@
 using FluentAssertions;
 using GitAgent.Models;
 using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.Git;
 using NSubstitute;
 
-namespace GitAgentCli.Tests.Services;
+namespace GitAgentCli.Tests.Services.Git;
 
 public class ConflictResolverTests
 {

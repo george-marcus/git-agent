@@ -1,7 +1,9 @@
 using FluentAssertions;
 using GitAgent.Configuration;
+using GitAgent.Configuration.ProviderConfigsModels;
 using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.AI;
+using GitAgent.Services.Infrastructure;
 using NSubstitute;
 
 namespace GitAgentCli.Tests.Providers;

@@ -2,9 +2,10 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using GitAgent.Configuration;
+using GitAgent.Configuration.ProviderConfigsModels;
 using GitAgent.Models;
-using GitAgent.Services;
+using GitAgent.Services.AI;
+using GitAgent.Services.Infrastructure;
 
 namespace GitAgent.Providers;
 

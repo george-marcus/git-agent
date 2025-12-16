@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
 using GitAgent.Configuration;
+using GitAgent.Configuration.ProviderConfigsModels;
 using GitAgent.Models;
 using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.Infrastructure;
 
 namespace GitAgent;
 

@@ -2,13 +2,17 @@ using System.CommandLine.Builder;
 using System.CommandLine.Hosting;
 using System.CommandLine.Parsing;
 using GitAgent.Commands;
+using GitAgent.Configuration;
 using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.AI;
+using GitAgent.Services.Execution;
+using GitAgent.Services.Git;
+using GitAgent.Services.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-var builder = new CommandLineBuilder(CommandBuilderExtensions.BuildRootCommand())
+var builder = new CommandLineBuilder(CommandsBuilder.BuildRootCommand())
     .UseHost(
         _ => Host.CreateDefaultBuilder(args)
             .ConfigureLogging(logging =>

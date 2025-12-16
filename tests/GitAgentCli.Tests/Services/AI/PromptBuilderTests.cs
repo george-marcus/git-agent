@@ -1,8 +1,8 @@
 using FluentAssertions;
 using GitAgent.Models;
-using GitAgent.Services;
+using GitAgent.Services.AI;
 
-namespace GitAgentCli.Tests.Services;
+namespace GitAgentCli.Tests.Services.AI;
 
 public class PromptBuilderTests
 {

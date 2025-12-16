@@ -1,4 +1,4 @@
-namespace GitAgent.Services;
+namespace GitAgent.Services.Infrastructure;
 
 public interface ICompletionGenerator
 {

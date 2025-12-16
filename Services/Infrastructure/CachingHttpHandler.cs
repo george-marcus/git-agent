@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.Infrastructure;
 
 public class CachingHttpHandler : DelegatingHandler
 {

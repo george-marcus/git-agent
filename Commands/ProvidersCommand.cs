@@ -1,5 +1,5 @@
-﻿using GitAgent.Providers;
-using GitAgent.Services;
+﻿using GitAgent.Configuration;
+using GitAgent.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using System.CommandLine;
 using System.CommandLine.Hosting;

@@ -1,7 +1,10 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Hosting;
+using GitAgent.Configuration;
 using GitAgent.Providers;
-using GitAgent.Services;
+using GitAgent.Services.Execution;
+using GitAgent.Services.Git;
+using GitAgent.Services.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GitAgent.Commands

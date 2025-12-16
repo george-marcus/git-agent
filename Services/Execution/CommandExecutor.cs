@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using GitAgent.Models;
 
-namespace GitAgent.Services;
+namespace GitAgent.Services.Execution;
 
 public interface ICommandExecutor
 {
