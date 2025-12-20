@@ -41,7 +41,7 @@ jobs:
         run: dotnet test --no-restore --verbosity normal
 
       - name: Publish
-        run: dotnet publish GitAgentCli.csproj -c Release -r ${{ matrix.rid }} -p:PublishSingleFile=true -p:PublishTrimmed=true -p:SelfContained=true -o ./publish
+        run: dotnet publish GitAgentCli.csproj -p:PublishProfile=${{ matrix.rid }}
 
       - name: Rename artifact (Unix)
         if: runner.os != 'Windows'
@@ -57,6 +57,32 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ./publish/${{ matrix.artifact }}
+
+  build-tool:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run tests
+        run: dotnet test --no-restore --verbosity normal
+
+      - name: Pack as tool
+        run: dotnet pack GitAgentCli.csproj -c Release -o ./nupkg -p:PackAsTool=true -p:ToolCommandName=git-agent -p:PackageId=GitAgent
+
+      - name: Upload tool artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-agent-tool
+          path: ./nupkg/*.nupkg
 
   build-extension:
     runs-on: ubuntu-latest
@@ -91,7 +117,7 @@ jobs:
           path: ./vscode-extension/git-agent.vsix
 
   release:
-    needs: [build, build-extension]
+    needs: [build, build-tool, build-extension]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -111,6 +137,7 @@ jobs:
             ./artifacts/git-agent-win-x64.exe/git-agent-win-x64.exe
             ./artifacts/git-agent-osx-x64/git-agent-osx-x64
             ./artifacts/git-agent-osx-arm64/git-agent-osx-arm64
+            ./artifacts/git-agent-tool/*.nupkg
             ./artifacts/git-agent-vscode-extension/git-agent.vsix
           generate_release_notes: true
         env:

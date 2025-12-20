@@ -8,11 +8,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>git-agent</AssemblyName>
-
-    <UseAppHost>true</UseAppHost>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>git-agent</ToolCommandName>
-    <PackageId>GitAgent</PackageId>
     <Version>1.1.0</Version>
     <Authors>George Marcus</Authors>
     <Description>Translate natural language to git commands using AI</Description>
